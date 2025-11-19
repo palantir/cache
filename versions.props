@@ -1,4 +1,4 @@
-com.github.ben-manes.caffeine:* = 3.2.3
+com.github.ben-manes.caffeine:* = 3.2.2
 com.google.guava:guava = 33.5.0-jre
 com.palantir.safe-logging:* = 3.9.0
 com.palantir.tracing:* = 6.29.0
