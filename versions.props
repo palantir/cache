@@ -4,5 +4,5 @@ com.palantir.safe-logging:* = 3.9.0
 com.palantir.tracing:* = 6.29.0
 com.palantir.tritium:* = 0.122.0
 org.assertj:* = 3.27.6
-org.junit.jupiter:* = 6.0.1
-org.junit.platform:* = 6.0.1
+org.junit.jupiter:* = 6.0.2
+org.junit.platform:* = 6.0.2
