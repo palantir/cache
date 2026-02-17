@@ -16,12 +16,11 @@
 
 package com.palantir.cache;
 
-import static com.palantir.logsafe.Preconditions.checkArgument;
 import static com.palantir.logsafe.Preconditions.checkNotNull;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.common.base.CharMatcher;
 import com.google.errorprone.annotations.CompileTimeConstant;
+import com.palantir.logsafe.Safe;
 import com.palantir.tritium.metrics.caffeine.CacheStats;
 import com.palantir.tritium.metrics.registry.TaggedMetricRegistry;
 import java.util.function.Function;
@@ -35,11 +34,6 @@ final class CacheBuilder<K, V>
                 Cache.MetricsBuilder<K, V>,
                 Cache.ExecutorBuilder<K, V>,
                 Cache.Builder<K, V> {
-
-    private static final CharMatcher NAME_MATCHER = CharMatcher.inRange('a', 'z')
-            .or(CharMatcher.inRange('0', '9'))
-            .or(CharMatcher.is('-'))
-            .precomputed();
 
     @Nullable
     private String name;
@@ -62,8 +56,7 @@ final class CacheBuilder<K, V>
     private Ticker ticker;
 
     @Override
-    public Cache.SizeBuilder<K, V> name(@CompileTimeConstant String name) {
-        checkArgument(NAME_MATCHER.matchesAllOf(name));
+    public Cache.SizeBuilder<K, V> name(@Safe @CompileTimeConstant String name) {
         this.name = checkNotNull(name, "name");
         return this;
     }

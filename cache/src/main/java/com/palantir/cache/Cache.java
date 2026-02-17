@@ -18,6 +18,7 @@ package com.palantir.cache;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.CompileTimeConstant;
+import com.palantir.logsafe.Safe;
 import com.palantir.tritium.metrics.registry.TaggedMetricRegistry;
 
 public enum Cache {
@@ -31,7 +32,7 @@ public enum Cache {
     @CheckReturnValue
     public interface NameBuilder<K, V> {
 
-        SizeBuilder<K, V> name(@CompileTimeConstant String name);
+        SizeBuilder<K, V> name(@Safe @CompileTimeConstant String name);
     }
 
     @CheckReturnValue
