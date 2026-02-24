@@ -31,8 +31,22 @@ public enum Cache {
     @CheckReturnValue
     public interface NameBuilder<K, V> {
 
+        /**
+         * Set the cache name, which will be used for metrics and observability.
+         * <p>
+         * This method will perform validation on the provided name.
+         */
         SizeBuilder<K, V> name(@CompileTimeConstant String name);
 
+        /**
+         * Set the cache name, which will be used for metrics and observability.
+         * <p>
+         * This method differs from {@link #name(String)} in that it does not perform any validation. It is intended
+         * to be used only when migrating legacy caches to this library without altering existing observability
+         * workflows which may depend on the cache name.
+         *
+         * @deprecated prefer {@link #name(String)} where possible.
+         */
         @Deprecated
         SizeBuilder<K, V> legacyName(@CompileTimeConstant String name);
     }

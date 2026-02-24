@@ -71,8 +71,6 @@ final class CacheBuilder<K, V>
 
     @Override
     public SizeBuilder<K, V> legacyName(@CompileTimeConstant String name) {
-        // legacyName is not subject to kebab-case restrictions
-        // this is to ease migration from existing Caffeine caches that may report metrics
         this.name = checkNotNull(name, "name");
         return this;
     }

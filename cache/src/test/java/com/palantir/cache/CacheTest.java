@@ -414,7 +414,7 @@ final class CacheTest {
     void name_validation() {
         assertThatCode(() -> {
                     Cache.<String, String>builder()
-                            .name("lower-kebab-case-ok-123")
+                            .name("valid-cache-name-123")
                             .maximumSize(1)
                             .noExpiry()
                             .noMetrics()
@@ -425,7 +425,7 @@ final class CacheTest {
 
         assertThatThrownBy(() -> {
                     Cache.<String, String>builder()
-                            .name("Not.kebab.CASE.###")
+                            .name("Invalid.CACHE.name.###")
                             .maximumSize(1)
                             .noExpiry()
                             .noMetrics()
@@ -436,7 +436,7 @@ final class CacheTest {
 
         assertThatCode(() -> {
                     Cache.<String, String>builder()
-                            .legacyName("Legacy.Name.!@#$@#%^")
+                            .legacyName("Legacy.Name.Allows_Anything#1")
                             .maximumSize(1)
                             .noExpiry()
                             .noMetrics()
