@@ -32,6 +32,9 @@ public enum Cache {
     public interface NameBuilder<K, V> {
 
         SizeBuilder<K, V> name(@CompileTimeConstant String name);
+
+        @Deprecated
+        SizeBuilder<K, V> legacyName(@CompileTimeConstant String name);
     }
 
     @CheckReturnValue

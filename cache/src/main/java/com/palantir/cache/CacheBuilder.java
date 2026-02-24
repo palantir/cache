@@ -22,6 +22,7 @@ import static com.palantir.logsafe.Preconditions.checkNotNull;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.CharMatcher;
 import com.google.errorprone.annotations.CompileTimeConstant;
+import com.palantir.cache.Cache.SizeBuilder;
 import com.palantir.tritium.metrics.caffeine.CacheStats;
 import com.palantir.tritium.metrics.registry.TaggedMetricRegistry;
 import java.util.function.Function;
@@ -64,6 +65,14 @@ final class CacheBuilder<K, V>
     @Override
     public Cache.SizeBuilder<K, V> name(@CompileTimeConstant String name) {
         checkArgument(NAME_MATCHER.matchesAllOf(name));
+        this.name = checkNotNull(name, "name");
+        return this;
+    }
+
+    @Override
+    public SizeBuilder<K, V> legacyName(@CompileTimeConstant String name) {
+        // legacyName is not subject to kebab-case restrictions
+        // this is to ease migration from existing Caffeine caches that may report metrics
         this.name = checkNotNull(name, "name");
         return this;
     }
