@@ -17,8 +17,11 @@
 package com.palantir.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
 import com.palantir.tracing.Observability;
 import com.palantir.tracing.Tracer;
 import com.palantir.tracing.Tracers;
@@ -404,6 +407,43 @@ final class CacheTest {
 
             return "value";
         });
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void name_validation() {
+        assertThatCode(() -> {
+                    Cache.<String, String>builder()
+                            .name("valid-cache-name-123")
+                            .maximumSize(1)
+                            .noExpiry()
+                            .noMetrics()
+                            .executor(_name -> executor)
+                            .buildSync();
+                })
+                .doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> {
+                    Cache.<String, String>builder()
+                            .name("Invalid.CACHE.name.###")
+                            .maximumSize(1)
+                            .noExpiry()
+                            .noMetrics()
+                            .executor(_name -> executor)
+                            .buildSync();
+                })
+                .isInstanceOf(SafeIllegalArgumentException.class);
+
+        assertThatCode(() -> {
+                    Cache.<String, String>builder()
+                            .legacyName("Legacy.Name.Allows_Anything#1")
+                            .maximumSize(1)
+                            .noExpiry()
+                            .noMetrics()
+                            .executor(_name -> executor)
+                            .buildSync();
+                })
+                .doesNotThrowAnyException();
     }
 
     private interface DefaultExpiry<K, V> extends Expiry<K, V> {

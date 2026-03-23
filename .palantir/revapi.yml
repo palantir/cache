@@ -1,0 +1,7 @@
+acceptedBreaks:
+  "0.3.0":
+    com.palantir.cache:cache:
+    - code: "java.method.addedToInterface"
+      new: "method com.palantir.cache.Cache.SizeBuilder<K, V> com.palantir.cache.Cache.NameBuilder<K,\
+        \ V>::legacyName(java.lang.String)"
+      justification: "additive change only, does not affect existing consumers"
