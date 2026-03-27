@@ -1,10 +1,10 @@
 # Run ./gradlew writeVersionsLocks to regenerate this file. Blank lines are to minimize merge conflicts.
 
-com.github.ben-manes.caffeine:caffeine:3.2.3 (2 constraints: 521591bf)
+com.github.ben-manes.caffeine:caffeine:3.2.3 (2 constraints: 531592bf)
 
 com.google.code.findbugs:jsr305:3.0.2 (1 constraints: a41965b5)
 
-com.google.errorprone:error_prone_annotations:2.43.0 (11 constraints: 3fa6927f)
+com.google.errorprone:error_prone_annotations:2.43.0 (11 constraints: 47a6d281)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
@@ -14,31 +14,31 @@ com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 c
 
 com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
-com.palantir.nylon:nylon-threads:0.7.0 (1 constraints: 0f100392)
+com.palantir.nylon:nylon-threads:0.8.0 (1 constraints: 10100692)
 
-com.palantir.safe-logging:logger:3.13.0 (5 constraints: e54ae836)
+com.palantir.safe-logging:logger:3.13.0 (5 constraints: e94a2938)
 
 com.palantir.safe-logging:logger-slf4j:3.13.0 (1 constraints: 320e9050)
 
 com.palantir.safe-logging:logger-spi:3.13.0 (2 constraints: 731e76b0)
 
-com.palantir.safe-logging:preconditions:3.13.0 (7 constraints: dc60fe45)
+com.palantir.safe-logging:preconditions:3.13.0 (7 constraints: e160fe47)
 
-com.palantir.safe-logging:safe-logging:3.13.0 (10 constraints: e98faf68)
+com.palantir.safe-logging:safe-logging:3.13.0 (10 constraints: ee8f386b)
 
 com.palantir.tracing:tracing:6.32.0 (1 constraints: 3d05553b)
 
 com.palantir.tracing:tracing-api:6.32.0 (2 constraints: 0f127118)
 
-com.palantir.tritium:tritium-api:0.125.0 (2 constraints: 911f19f4)
+com.palantir.tritium:tritium-api:0.126.0 (2 constraints: 931f4ef4)
 
-com.palantir.tritium:tritium-caffeine:0.125.0 (1 constraints: 6a059f40)
+com.palantir.tritium:tritium-caffeine:0.126.0 (1 constraints: 6b05a240)
 
-com.palantir.tritium:tritium-core:0.125.0 (1 constraints: 7010aeb2)
+com.palantir.tritium:tritium-core:0.126.0 (1 constraints: 7110b1b2)
 
-com.palantir.tritium:tritium-metrics:0.125.0 (1 constraints: aa10fec2)
+com.palantir.tritium:tritium-metrics:0.126.0 (1 constraints: ab1001c3)
 
-com.palantir.tritium:tritium-registry:0.125.0 (3 constraints: 8226a3c7)
+com.palantir.tritium:tritium-registry:0.126.0 (3 constraints: 85263ac8)
 
 io.dropwizard.metrics:metrics-core:4.2.38 (3 constraints: 95312d08)
 
