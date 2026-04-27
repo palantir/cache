@@ -11,3 +11,4 @@ apply plugin: 'com.palantir.jdks.settings'
 rootProject.name = 'cache-root'
 
 include 'cache'
+include 'cache-errorprone'
