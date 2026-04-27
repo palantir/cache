@@ -82,7 +82,8 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
     //
     // Note that building an AsyncLoadingCache also requires a com.palantir.cache.ExecutorFactory.
     // Ideally this is something that could be passed in from an enclosing scope, giving callers control over what
-    // ExecutorFactory instance will be used. For now to keep things simple, we just use Executors.newCachedThreadPool(),
+    // ExecutorFactory instance will be used. For now to keep things simple, we just use
+    // Executors.newCachedThreadPool(),
     // but this is perhaps a future improvement to consider.
     //
     // Also note that this check doesn't try to clean up unused imports if they still exist after refactoring; we leave
