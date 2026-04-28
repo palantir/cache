@@ -1,14 +1,28 @@
 # Run ./gradlew writeVersionsLocks to regenerate this file. Blank lines are to minimize merge conflicts.
 
-com.github.ben-manes.caffeine:caffeine:3.2.3 (2 constraints: 531592bf)
+com.github.ben-manes.caffeine:caffeine:3.2.3 (3 constraints: 3528ef45)
+
+com.github.kevinstern:software-and-algorithms:1.0 (1 constraints: 7e12fcf5)
+
+com.google.auto:auto-common:1.2.2 (2 constraints: b421cd9d)
+
+com.google.auto.service:auto-service:1.1.1 (1 constraints: 0505f435)
+
+com.google.auto.service:auto-service-annotations:1.1.1 (1 constraints: 9c0f6a86)
+
+com.google.auto.value:auto-value-annotations:1.11.0 (3 constraints: 562f3924)
 
 com.google.code.findbugs:jsr305:3.0.2 (1 constraints: a41965b5)
 
-com.google.errorprone:error_prone_annotations:2.47.0 (11 constraints: 4da6508b)
+com.google.errorprone:error_prone_annotation:2.47.0 (3 constraints: e72c3e48)
+
+com.google.errorprone:error_prone_annotations:2.47.0 (15 constraints: c1ddf119)
+
+com.google.errorprone:error_prone_check_api:2.47.0 (2 constraints: d0196fd6)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
-com.google.guava:guava:33.6.0-jre (6 constraints: 1a5b78da)
+com.google.guava:guava:33.6.0-jre (13 constraints: 90d1754b)
 
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 constraints: bd17c918)
 
@@ -42,6 +56,10 @@ com.palantir.tritium:tritium-registry:0.126.0 (3 constraints: 85263ac8)
 
 io.dropwizard.metrics:metrics-core:4.2.38 (3 constraints: 95312d08)
 
+io.github.eisop:dataflow-errorprone:3.41.0-eisop1 (2 constraints: 9c2c4f1c)
+
+io.github.java-diff-utils:java-diff-utils:4.12 (1 constraints: b412c908)
+
 io.smallrye.common:smallrye-common-annotation:2.14.0 (1 constraints: f20d0944)
 
 io.smallrye.common:smallrye-common-constraint:2.14.0 (4 constraints: e841a41c)
@@ -58,7 +76,11 @@ io.smallrye.common:smallrye-common-os:2.4.0 (1 constraints: b10e835a)
 
 io.smallrye.common:smallrye-common-ref:2.4.0 (1 constraints: b10e835a)
 
+javax.inject:javax.inject:1 (1 constraints: 201230d1)
+
 org.hdrhistogram:HdrHistogram:2.2.2 (1 constraints: 0e100092)
+
+org.immutables:value:2.12.1 (1 constraints: 3805363b)
 
 org.jboss.logging:jboss-logging:3.6.1.Final (5 constraints: ad624ec6)
 
@@ -66,7 +88,7 @@ org.jboss.threads:jboss-threads:3.9.2 (1 constraints: 4e0e2749)
 
 org.jetbrains:annotations:26.1.0 (1 constraints: 351170d1)
 
-org.jspecify:jspecify:1.0.0 (13 constraints: 22ce8afd)
+org.jspecify:jspecify:1.0.0 (17 constraints: cd116aee)
 
 org.mpierce.metrics.reservoir:hdrhistogram-metrics-reservoir:1.1.3 (1 constraints: 0d10f991)
 
@@ -78,11 +100,29 @@ org.wildfly.common:wildfly-common:2.0.1 (1 constraints: be0d0b36)
 
 [Test dependencies]
 
+com.google.errorprone:error_prone_test_helpers:2.47.0 (1 constraints: 3e054d3b)
+
+com.google.googlejavaformat:google-java-format:1.27.0 (1 constraints: 9014ad75)
+
+com.google.jimfs:jimfs:1.3.0 (1 constraints: 5a141061)
+
+com.google.testing.compile:compile-testing:0.23.0 (1 constraints: 8b149b75)
+
+com.google.truth:truth:1.4.5 (2 constraints: 7726656a)
+
+junit:junit:4.13.2 (3 constraints: 6d31ed4f)
+
 net.bytebuddy:byte-buddy:1.18.3 (1 constraints: 530b55df)
 
 org.apiguardian:apiguardian-api:1.1.2 (6 constraints: 5366ce6e)
 
 org.assertj:assertj-core:3.27.7 (1 constraints: 4505553b)
+
+org.hamcrest:hamcrest:2.2 (1 constraints: 720b95d5)
+
+org.hamcrest:hamcrest-core:2.2 (3 constraints: 84262b80)
+
+org.hamcrest:hamcrest-library:2.2 (1 constraints: fc138e38)
 
 org.junit.jupiter:junit-jupiter:6.0.3 (1 constraints: 4a070d70)
 
@@ -99,3 +139,5 @@ org.junit.platform:junit-platform-engine:6.0.3 (2 constraints: f1224608)
 org.junit.platform:junit-platform-launcher:6.0.3 (1 constraints: 0b050c36)
 
 org.opentest4j:opentest4j:1.3.0 (2 constraints: cf209249)
+
+org.ow2.asm:asm:9.8 (1 constraints: 0b0aaea4)
