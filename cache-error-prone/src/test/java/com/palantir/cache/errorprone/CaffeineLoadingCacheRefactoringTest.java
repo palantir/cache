@@ -129,7 +129,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .noExpiry()
                                     .noMetrics()
@@ -193,7 +193,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .noExpiry()
                                     .noMetrics()
@@ -250,7 +250,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.myValueCache =
                             Cache.<String, String>builder()
-                                    .name("com-example-test-my-value-cache")
+                                    .name("com-example-test-cache-0")
                                     .maximumSize(100)
                                     .noExpiry()
                                     .noMetrics()
@@ -307,7 +307,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(Long.MAX_VALUE)
                                     .noExpiry()
                                     .noMetrics()
@@ -364,7 +364,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .expiry(Expiry.afterWrite(Duration.ofMinutes(1)))
                                     .noMetrics()
@@ -425,7 +425,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .expiry(Expiry.afterWrite(Duration.of(1, TimeUnit.MINUTES.toChronoUnit())))
                                     .noMetrics()
@@ -485,7 +485,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .expiry(Expiry.afterAccess(Duration.ofMinutes(1)))
                                     .noMetrics()
@@ -546,7 +546,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<String, String>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .expiry(Expiry.afterAccess(Duration.of(1, TimeUnit.MINUTES.toChronoUnit())))
                                     .noMetrics()
@@ -735,7 +735,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCache() {
                     this.cache =
                             Cache.<java.util.List<String>, Map<String, Integer>>builder()
-                                    .name("test-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .noExpiry()
                                     .noMetrics()
@@ -796,7 +796,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 void setupCaches() {
                     this.firstCache =
                             Cache.<String, String>builder()
-                                    .name("test-first-cache")
+                                    .name("test-cache-0")
                                     .maximumSize(100)
                                     .noExpiry()
                                     .noMetrics()
@@ -804,7 +804,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                                     .buildAsyncWithLoader(this::loadFirst);
                     this.secondCache =
                             Cache.<String, Integer>builder()
-                                    .name("test-second-cache")
+                                    .name("test-cache-1")
                                     .maximumSize(Long.MAX_VALUE)
                                     .expiry(Expiry.afterWrite(Duration.ofMinutes(1)))
                                     .noMetrics()
@@ -849,6 +849,123 @@ final class CaffeineLoadingCacheRefactoringTest {
 
                             private int loadSecond(String key) {
                                 return 0;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest(TestMode.TEXT_MATCH);
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void refactors_multiple_caches_in_multiple_classes() {
+        // language=java
+        String output = """
+            package com.example;
+
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.cache.Expiry;
+            import java.time.Duration;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> firstCache;
+                private AsyncLoadingCache<String, Integer> secondCache;
+
+                void setupCaches() {
+                    this.firstCache =
+                            Cache.<String, String>builder()
+                                    .name("com-example-test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::loadFirst);
+                    this.secondCache =
+                            Cache.<String, Integer>builder()
+                                    .name("com-example-test-cache-1")
+                                    .maximumSize(Long.MAX_VALUE)
+                                    .expiry(Expiry.afterWrite(Duration.ofMinutes(1)))
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::loadSecond);
+                }
+
+                private String loadFirst(String key) {
+                    return key;
+                }
+
+                private int loadSecond(String key) {
+                    return 0;
+                }
+
+                private static final class InnerClass {
+                    private AsyncLoadingCache<String, String> innerCache;
+
+                    void setupInner() {
+                        this.innerCache =
+                                Cache.<String, String>builder()
+                                        .name("com-example-test-inner-class-cache-0")
+                                        .maximumSize(Long.MAX_VALUE)
+                                        .expiry(Expiry.afterWrite(Duration.ofMinutes(1)))
+                                        .noMetrics()
+                                        .executor(_name -> Executors.newCachedThreadPool())
+                                        .buildAsyncWithLoader(this::load);
+                    }
+
+                    private String load(String key) {
+                        return key;
+                    }
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        package com.example;
+
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import java.time.Duration;
+
+                        class Test {
+                            private LoadingCache<String, String> firstCache;
+                            private LoadingCache<String, Integer> secondCache;
+
+                            void setupCaches() {
+                                this.firstCache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .build(this::loadFirst);
+                                this.secondCache = Caffeine.newBuilder()
+                                        .expireAfterWrite(Duration.ofMinutes(1))
+                                        .build(this::loadSecond);
+                            }
+
+                            private String loadFirst(String key) {
+                                return key;
+                            }
+
+                            private int loadSecond(String key) {
+                                return 0;
+                            }
+
+                            private static final class InnerClass {
+                                private LoadingCache<String, String> innerCache;
+
+                                void setupInner() {
+                                    this.innerCache = Caffeine.newBuilder()
+                                            .expireAfterWrite(Duration.ofMinutes(1))
+                                            .build(this::load);
+                                }
+
+                                private String load(String key) {
+                                    return key;
+                                }
                             }
                         }
                         """.stripIndent())

@@ -53,6 +53,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.immutables.value.Value;
+import org.jspecify.annotations.Nullable;
 
 @AutoService(BugChecker.class)
 @BugPattern(
@@ -251,6 +252,13 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             .named("build")
             .withParameters("com.github.benmanes.caffeine.cache.CacheLoader");
 
+    // keep track of the number of caches we have successfully refactored per enclosing class
+    // the counter is used to suffix automatically generated cache names for metrics
+    @Nullable
+    private ClassTree currentEnclosingClass;
+
+    private int nextInferredNameSuffix = 0;
+
     @Override
     public Description matchMethodInvocation(MethodInvocationTree tree, VisitorState state) {
         // are we looking at Caffeine.newBuilder()...build(CacheLoader)?
@@ -379,7 +387,13 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             return Optional.empty();
         }
 
-        Optional<String> inferredName = inferNameArg(varSymbol, state);
+        ClassTree enclosingClass = ASTHelpers.findEnclosingNode(state.getPath(), ClassTree.class);
+        if (currentEnclosingClass != enclosingClass) {
+            currentEnclosingClass = enclosingClass;
+            nextInferredNameSuffix = 0;
+        }
+
+        Optional<String> inferredName = inferNameArg(enclosingClass);
         // we should always be able to derive a name for the cache, even if we end up not using it
         // if we can't, then we can't actually refactor this cache
         if (inferredName.isEmpty()) {
@@ -520,6 +534,14 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 false,
                 fixBuilder,
                 state);
+
+        // nextInferredNameSuffix is used to suffix automatically inferred cache names when a legacy name is not present
+        // we only increment this if we actually used the inferred name, otherwise things might get confusing
+        // if we end up with a mix of refactors in the same class that use both legacy and inferred names
+        // (e.g. "com-example-foo-cache-0", "SomeLegacyName", "com-example-foo-cache-2"
+        if (!spec.nameArg().isLegacy()) {
+            nextInferredNameSuffix++;
+        }
 
         return Optional.of(fixBuilder.build());
     }
@@ -692,22 +714,14 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         }
     }
 
-    // TODO(blaub): this logic is a bit wonky
-    // if we have multiple caches in the same class that are refactored, we will end up with conflicting cache names
-    // we could potentially try to preserve some state within this class (like an AtomicInteger) that gets used
-    // as a suffix to uniquely identify caches, but that may not be fool-proof; i'm not sure how often errorprone
-    // will invoke this BugChecker on a single compilation unit
-    private Optional<String> inferNameArg(VarSymbol varSymbol, VisitorState state) {
+    private Optional<String> inferNameArg(ClassTree enclosingClass) {
         // use the fully-qualified name to the nearest enclosing class for the cache being constructed, and
         // convert to kebab-case to make it compatible with the caching library
-        ClassTree enclosingClass = ASTHelpers.findEnclosingNode(state.getPath(), ClassTree.class);
         if (enclosingClass != null) {
             Symbol classSymbol = ASTHelpers.getSymbol(enclosingClass);
             if (classSymbol != null) {
-                String varSymbolSuffix =
-                        varSymbol != null ? "-" + varSymbol.getQualifiedName().toString() : "";
                 String sanitizedCacheName =
-                        toLowerKebabCase(classSymbol.getQualifiedName().toString() + varSymbolSuffix);
+                        toLowerKebabCase(classSymbol.getQualifiedName() + "-cache-" + nextInferredNameSuffix);
                 return Optional.of("\"" + sanitizedCacheName + "\"");
             }
         }
