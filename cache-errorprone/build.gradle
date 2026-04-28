@@ -1,6 +1,14 @@
 apply plugin: 'java-library'
+apply plugin: 'com.palantir.
+apply plugin: 'com.palantir.external-publish-jar'
 
 dependencies {
+    annotationProcessor 'com.google.auto.service:auto-service'
+    annotationProcessor 'org.immutables:value'
+
+    compileOnly 'com.google.auto.service:auto-service'
+    compileOnly 'org.immutables:value::annotations'
+
     implementation 'com.google.errorprone:error_prone_core'
 
     testImplementation 'com.google.errorprone:error_prone_test_helpers'
@@ -10,25 +18,16 @@ dependencies {
     testRuntimeOnly project(':cache')
     testRuntimeOnly 'com.palantir.tritium:tritium-registry'
     testRuntimeOnly 'com.palantir.tritium:tritium-caffeine'
-
-    annotationProcessor 'com.google.auto.service:auto-service'
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'org.immutables:value'
-    compileOnly 'org.immutables:value::annotations'
 }
 
-// TODO(blaub): audit these and remove as necessary
 moduleJvmArgs {
-    exports().addAll(
-            'jdk.compiler/com.sun.tools.javac.api',
+    exports = [
             'jdk.compiler/com.sun.tools.javac.code',
-            'jdk.compiler/com.sun.tools.javac.comp',
-            'jdk.compiler/com.sun.tools.javac.file',
             'jdk.compiler/com.sun.tools.javac.main',
-            'jdk.compiler/com.sun.tools.javac.parser',
             'jdk.compiler/com.sun.tools.javac.processing',
             'jdk.compiler/com.sun.tools.javac.tree',
-            'jdk.compiler/com.sun.tools.javac.util')
+            'jdk.compiler/com.sun.tools.javac.util'
+    ]
 
-    opens().add('jdk.compiler/com.sun.tools.javac.comp')
+    opens = ['jdk.compiler/com.sun.tools.javac.comp']
 }
