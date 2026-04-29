@@ -16,13 +16,13 @@ com.google.code.findbugs:jsr305:3.0.2 (1 constraints: a41965b5)
 
 com.google.errorprone:error_prone_annotation:2.47.0 (3 constraints: e72c3e48)
 
-com.google.errorprone:error_prone_annotations:2.47.0 (15 constraints: d1dd711e)
+com.google.errorprone:error_prone_annotations:2.47.0 (15 constraints: d5dd5921)
 
 com.google.errorprone:error_prone_check_api:2.47.0 (2 constraints: d0196fd6)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
-com.google.guava:guava:33.6.0-jre (13 constraints: 94d1bd4c)
+com.google.guava:guava:33.6.0-jre (13 constraints: 95d18b4d)
 
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 constraints: bd17c918)
 
@@ -30,19 +30,19 @@ com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
 com.palantir.nylon:nylon-threads:0.9.0 (1 constraints: 11100992)
 
-com.palantir.safe-logging:logger:3.14.0 (5 constraints: ee4af539)
+com.palantir.safe-logging:logger:3.14.0 (5 constraints: ef4a803a)
 
 com.palantir.safe-logging:logger-slf4j:3.14.0 (1 constraints: 330e9350)
 
 com.palantir.safe-logging:logger-spi:3.14.0 (2 constraints: 751eacb0)
 
-com.palantir.safe-logging:preconditions:3.14.0 (7 constraints: e860c24b)
+com.palantir.safe-logging:preconditions:3.14.0 (7 constraints: e9607c4c)
 
-com.palantir.safe-logging:safe-logging:3.14.0 (10 constraints: f88f3e73)
+com.palantir.safe-logging:safe-logging:3.14.0 (10 constraints: f98ff873)
 
-com.palantir.tracing:tracing:6.33.0 (1 constraints: 3e05583b)
+com.palantir.tracing:tracing:6.34.0 (1 constraints: 3f055b3b)
 
-com.palantir.tracing:tracing-api:6.33.0 (2 constraints: 11129d18)
+com.palantir.tracing:tracing-api:6.34.0 (2 constraints: 1312c918)
 
 com.palantir.tritium:tritium-api:0.127.0 (2 constraints: 951f83f4)
 
