@@ -28,31 +28,31 @@ com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 c
 
 com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
-com.palantir.nylon:nylon-threads:0.9.0 (1 constraints: 11100992)
+com.palantir.nylon:nylon-threads:0.10.0 (1 constraints: 39102ca2)
 
-com.palantir.safe-logging:logger:3.14.0 (5 constraints: ef4a803a)
+com.palantir.safe-logging:logger:3.14.0 (5 constraints: f04a313b)
 
 com.palantir.safe-logging:logger-slf4j:3.14.0 (1 constraints: 330e9350)
 
 com.palantir.safe-logging:logger-spi:3.14.0 (2 constraints: 751eacb0)
 
-com.palantir.safe-logging:preconditions:3.14.0 (7 constraints: e9607c4c)
+com.palantir.safe-logging:preconditions:3.14.0 (7 constraints: ea605c4d)
 
-com.palantir.safe-logging:safe-logging:3.14.0 (10 constraints: f98ff873)
+com.palantir.safe-logging:safe-logging:3.14.0 (10 constraints: fa8f6175)
 
 com.palantir.tracing:tracing:6.34.0 (1 constraints: 3f055b3b)
 
 com.palantir.tracing:tracing-api:6.34.0 (2 constraints: 1312c918)
 
-com.palantir.tritium:tritium-api:0.127.0 (2 constraints: 951f83f4)
+com.palantir.tritium:tritium-api:0.128.0 (2 constraints: 971fb8f4)
 
-com.palantir.tritium:tritium-caffeine:0.127.0 (1 constraints: 6c05a540)
+com.palantir.tritium:tritium-caffeine:0.128.0 (1 constraints: 6d05a840)
 
-com.palantir.tritium:tritium-core:0.127.0 (1 constraints: 7210b4b2)
+com.palantir.tritium:tritium-core:0.128.0 (1 constraints: 7310b7b2)
 
-com.palantir.tritium:tritium-metrics:0.127.0 (1 constraints: ac1004c3)
+com.palantir.tritium:tritium-metrics:0.128.0 (1 constraints: ad1007c3)
 
-com.palantir.tritium:tritium-registry:0.127.0 (3 constraints: 8826d1c8)
+com.palantir.tritium:tritium-registry:0.128.0 (3 constraints: 8b2668c9)
 
 io.dropwizard.metrics:metrics-core:4.2.38 (3 constraints: 95312d08)
 
