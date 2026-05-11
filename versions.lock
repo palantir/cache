@@ -1,6 +1,6 @@
 # Run ./gradlew writeVersionsLocks to regenerate this file. Blank lines are to minimize merge conflicts.
 
-com.github.ben-manes.caffeine:caffeine:3.2.3 (3 constraints: 3528ef45)
+com.github.ben-manes.caffeine:caffeine:3.2.4 (3 constraints: 3628f045)
 
 com.github.kevinstern:software-and-algorithms:1.0 (1 constraints: 7e12fcf5)
 
@@ -14,11 +14,11 @@ com.google.auto.value:auto-value-annotations:1.11.0 (3 constraints: 562f3924)
 
 com.google.code.findbugs:jsr305:3.0.2 (1 constraints: a41965b5)
 
-com.google.errorprone:error_prone_annotation:2.47.0 (3 constraints: e72c3e48)
+com.google.errorprone:error_prone_annotation:2.49.0 (3 constraints: eb2cba48)
 
-com.google.errorprone:error_prone_annotations:2.47.0 (15 constraints: d5dd5921)
+com.google.errorprone:error_prone_annotations:2.49.0 (15 constraints: e7dde938)
 
-com.google.errorprone:error_prone_check_api:2.47.0 (2 constraints: d0196fd6)
+com.google.errorprone:error_prone_check_api:2.49.0 (2 constraints: d21975d6)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
@@ -44,15 +44,15 @@ com.palantir.tracing:tracing:6.34.0 (1 constraints: 3f055b3b)
 
 com.palantir.tracing:tracing-api:6.34.0 (2 constraints: 1312c918)
 
-com.palantir.tritium:tritium-api:0.128.0 (2 constraints: 971fb8f4)
+com.palantir.tritium:tritium-api:0.129.0 (2 constraints: 991fedf4)
 
-com.palantir.tritium:tritium-caffeine:0.128.0 (1 constraints: 6d05a840)
+com.palantir.tritium:tritium-caffeine:0.129.0 (1 constraints: 6e05ab40)
 
-com.palantir.tritium:tritium-core:0.128.0 (1 constraints: 7310b7b2)
+com.palantir.tritium:tritium-core:0.129.0 (1 constraints: 7410bab2)
 
-com.palantir.tritium:tritium-metrics:0.128.0 (1 constraints: ad1007c3)
+com.palantir.tritium:tritium-metrics:0.129.0 (1 constraints: ae100ac3)
 
-com.palantir.tritium:tritium-registry:0.128.0 (3 constraints: 8b2668c9)
+com.palantir.tritium:tritium-registry:0.129.0 (3 constraints: 8e26ffc9)
 
 io.dropwizard.metrics:metrics-core:4.2.38 (3 constraints: 95312d08)
 
@@ -100,9 +100,9 @@ org.wildfly.common:wildfly-common:2.0.1 (1 constraints: be0d0b36)
 
 [Test dependencies]
 
-com.google.errorprone:error_prone_test_helpers:2.47.0 (1 constraints: 3e054d3b)
+com.google.errorprone:error_prone_test_helpers:2.49.0 (1 constraints: 3e054d3b)
 
-com.google.googlejavaformat:google-java-format:1.27.0 (1 constraints: 9014ad75)
+com.google.googlejavaformat:google-java-format:1.35.0 (1 constraints: 8f14ab75)
 
 com.google.jimfs:jimfs:1.3.0 (1 constraints: 5a141061)
 
