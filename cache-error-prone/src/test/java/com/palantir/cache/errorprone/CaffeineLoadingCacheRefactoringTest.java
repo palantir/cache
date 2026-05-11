@@ -35,6 +35,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         compilationHelper().addSourceLines(path, lines).matchAllDiagnostics().doTest();
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_methods() {
         // language=java
@@ -60,6 +61,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_builder_methods() {
         // language=java
@@ -87,6 +89,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_non_fluent_builder() {
         // language=java
@@ -112,6 +115,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_null_checks_on_cache_reads() {
         // language=java
@@ -177,6 +181,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void refactors_simple_loading_cache() {
         // language=java
@@ -233,6 +238,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void infers_cache_name() {
         // language=java
@@ -291,6 +297,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_default_maximum_size() {
         // language=java
@@ -346,6 +353,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_write_duration() {
         // language=java
@@ -406,6 +414,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_write_time_unit() {
         // language=java
@@ -467,6 +476,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_access_duration() {
         // language=java
@@ -527,6 +537,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_access_time_unit() {
         // language=java
@@ -588,6 +599,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_cache_stats_wrapper() {
         // language=java
@@ -650,6 +662,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_legacy_cache_name() {
         // language=java
@@ -717,6 +730,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void nested_type_params_on_cache_type_params_are_preserved() {
         // language=java
@@ -777,6 +791,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void refactors_multiple_caches_in_same_class() {
         // language=java
@@ -857,6 +872,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void refactors_multiple_caches_in_multiple_classes() {
         // language=java
