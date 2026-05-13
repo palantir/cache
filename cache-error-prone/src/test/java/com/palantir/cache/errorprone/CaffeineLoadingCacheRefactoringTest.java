@@ -235,6 +235,72 @@ final class CaffeineLoadingCacheRefactoringTest {
 
     @SuppressWarnings("for-rollout:deprecation")
     @Test
+    void handles_existing_preconditions_check_on_cache_reads() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.logsafe.Preconditions;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+
+                String getValue(String key) {
+                    return Preconditions.checkNotNull(cache.get(key));
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import com.palantir.logsafe.Preconditions;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+
+                            String getValue(String key) {
+                                return Preconditions.checkNotNull(cache.get(key));
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest(TestMode.TEXT_MATCH);
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
     void refactors_simple_loading_cache() {
         // language=java
         String output = """
