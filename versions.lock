@@ -80,7 +80,7 @@ javax.inject:javax.inject:1 (1 constraints: 201230d1)
 
 org.hdrhistogram:HdrHistogram:2.2.2 (1 constraints: 0e100092)
 
-org.immutables:value:2.12.1 (1 constraints: 3805363b)
+org.immutables:value:2.12.2 (1 constraints: 3905373b)
 
 org.jboss.logging:jboss-logging:3.6.1.Final (5 constraints: ad624ec6)
 
