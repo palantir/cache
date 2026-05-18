@@ -17,7 +17,6 @@
 package com.palantir.cache.errorprone;
 
 import com.google.errorprone.BugCheckerRefactoringTestHelper;
-import com.google.errorprone.BugCheckerRefactoringTestHelper.TestMode;
 import com.google.errorprone.CompilationTestHelper;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +56,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
@@ -137,7 +136,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
@@ -163,7 +162,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 private String load(String key) { return key; }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
@@ -229,11 +228,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_existing_preconditions_check_on_cache_reads() {
         // language=java
@@ -296,7 +294,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -352,7 +350,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -411,7 +409,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -467,7 +465,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -528,7 +526,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -590,7 +588,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -651,7 +649,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -713,7 +711,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -776,7 +774,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -844,7 +842,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -905,7 +903,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -986,7 +984,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
@@ -1104,7 +1102,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 }

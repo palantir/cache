@@ -45,10 +45,12 @@ import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -253,6 +255,10 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             .named("build")
             .withParameters("com.github.benmanes.caffeine.cache.CacheLoader");
 
+    private static final Matcher<ExpressionTree> PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
+            .onClass("com.palantir.logsafe.Preconditions")
+            .named("checkNotNull");
+
     // keep track of the number of caches we have successfully refactored per enclosing class
     // the counter is used to suffix automatically generated cache names for metrics
     @Nullable
@@ -332,6 +338,8 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                     .getCompilationUnit()
                     .accept(
                             new TreeScanner<Boolean, Void>() {
+                                private final Set<ExpressionTree> alreadyNullChecked = new HashSet<>();
+
                                 @Override
                                 public Boolean reduce(Boolean lhs, Boolean rhs) {
                                     // fail if any invocation is on a banned method
@@ -352,6 +360,11 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                         }
                                     }
 
+                                    if (PRECONDITIONS_CHECK_NOT_NULL.matches(tree, state)
+                                            && !tree.getArguments().isEmpty()) {
+                                        alreadyNullChecked.add(
+                                                tree.getArguments().get(0));
+                                    }
                                     ExpressionTree receiver = ASTHelpers.getReceiver(tree);
                                     Symbol thisSymbol = ASTHelpers.getSymbol(receiver);
                                     if (thisSymbol != null) {
@@ -364,13 +377,11 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                                 return true;
                                             }
 
-                                            // are we invoking any get method that might return null?
-                                            // if so, refactor it
-                                            // TODO(blaub): does not check for cases where the read was already
-                                            // wrapped in a null check, or that the check is performed elsewhere
-                                            if (AllowedCacheMethods.GET.matches(tree, state)
-                                                    || AllowedCacheMethods.GET_IF_PRESENT.matches(tree, state)
-                                                    || AllowedCacheMethods.GET_WITH_LOADER.matches(tree, state)) {
+                                            if (!alreadyNullChecked.contains(tree)
+                                                    && (AllowedCacheMethods.GET.matches(tree, state)
+                                                            || AllowedCacheMethods.GET_IF_PRESENT.matches(tree, state)
+                                                            || AllowedCacheMethods.GET_WITH_LOADER.matches(
+                                                                    tree, state))) {
                                                 String preconditionsType = SuggestedFixes.qualifyType(
                                                         state, fixBuilder, "com.palantir.logsafe.Preconditions");
                                                 fixBuilder
