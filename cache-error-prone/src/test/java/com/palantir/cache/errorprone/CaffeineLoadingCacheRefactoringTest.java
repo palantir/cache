@@ -242,6 +242,7 @@ final class CaffeineLoadingCacheRefactoringTest {
             import com.palantir.cache.Cache;
             import com.palantir.logsafe.Preconditions;
             import java.util.concurrent.Executors;
+            import java.util.Objects;
 
             class Test {
                 private AsyncLoadingCache<String, String> cache;
@@ -261,8 +262,16 @@ final class CaffeineLoadingCacheRefactoringTest {
                     return key;
                 }
 
-                String getValue(String key) {
+                String getValueLogsafe(String key) {
                     return Preconditions.checkNotNull(cache.get(key));
+                }
+
+                String getValueGuava(String key) {
+                    return com.google.common.base.Preconditions.checkNotNull(cache.get(key));
+                }
+
+                String getValueObjects(String key) {
+                    return Objects.requireNonNull(cache.get(key));
                 }
             }
             """.stripIndent();
@@ -274,6 +283,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         import com.github.benmanes.caffeine.cache.Caffeine;
                         import com.github.benmanes.caffeine.cache.LoadingCache;
                         import com.palantir.logsafe.Preconditions;
+                        import java.util.Objects;
 
                         class Test {
                             private LoadingCache<String, String> cache;
@@ -288,8 +298,16 @@ final class CaffeineLoadingCacheRefactoringTest {
                                 return key;
                             }
 
-                            String getValue(String key) {
+                            String getValueLogsafe(String key) {
                                 return Preconditions.checkNotNull(cache.get(key));
+                            }
+
+                            String getValueGuava(String key) {
+                                return com.google.common.base.Preconditions.checkNotNull(cache.get(key));
+                            }
+
+                            String getValueObjects(String key) {
+                                return Objects.requireNonNull(cache.get(key));
                             }
                         }
                         """.stripIndent())

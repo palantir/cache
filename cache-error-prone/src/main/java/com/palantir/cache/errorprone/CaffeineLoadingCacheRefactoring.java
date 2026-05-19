@@ -241,6 +241,24 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 RECORD_STATS_SUPPLIER);
     }
 
+    private static final class NullChecks {
+        private static final Matcher<ExpressionTree> LOGSAFE_PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
+                .onClass("com.palantir.logsafe.Preconditions")
+                .named("checkNotNull");
+
+        private static final Matcher<ExpressionTree> GUAVA_PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
+                .onClass("com.google.common.base.Preconditions")
+                .named("checkNotNull");
+
+        private static final Matcher<ExpressionTree> JAVA_UTIL_OBJECTS_REQUIRE_NON_NULL =
+                Matchers.staticMethod().onClass("java.util.Objects").named("requireNonNull");
+
+        private static final Matcher<ExpressionTree> ALL_ALLOWED = Matchers.anyOf(
+                LOGSAFE_PRECONDITIONS_CHECK_NOT_NULL,
+                GUAVA_PRECONDITIONS_CHECK_NOT_NULL,
+                JAVA_UTIL_OBJECTS_REQUIRE_NON_NULL);
+    }
+
     private static final String CACHE_STATS_CLASS = "com.palantir.tritium.metrics.caffeine.CacheStats";
 
     private static final Matcher<ExpressionTree> CACHE_STATS_REGISTER =
@@ -254,10 +272,6 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             .onDescendantOf(CAFFEINE_CLASS)
             .named("build")
             .withParameters("com.github.benmanes.caffeine.cache.CacheLoader");
-
-    private static final Matcher<ExpressionTree> PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
-            .onClass("com.palantir.logsafe.Preconditions")
-            .named("checkNotNull");
 
     // keep track of the number of caches we have successfully refactored per enclosing class
     // the counter is used to suffix automatically generated cache names for metrics
@@ -359,8 +373,7 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                             return true;
                                         }
                                     }
-
-                                    if (PRECONDITIONS_CHECK_NOT_NULL.matches(tree, state)
+                                    if (NullChecks.ALL_ALLOWED.matches(tree, state)
                                             && !tree.getArguments().isEmpty()) {
                                         alreadyNullChecked.add(
                                                 tree.getArguments().get(0));
