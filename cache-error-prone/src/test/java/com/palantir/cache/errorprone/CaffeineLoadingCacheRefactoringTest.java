@@ -60,7 +60,6 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_passed_as_method_argument() {
         // language=java
@@ -81,11 +80,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 private void doSomething(LoadingCache<String, String> c) {}
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_passed_to_constructor() {
         // language=java
@@ -108,7 +106,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
