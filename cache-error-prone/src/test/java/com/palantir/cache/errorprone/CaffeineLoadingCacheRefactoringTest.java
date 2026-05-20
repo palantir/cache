@@ -17,7 +17,6 @@
 package com.palantir.cache.errorprone;
 
 import com.google.errorprone.BugCheckerRefactoringTestHelper;
-import com.google.errorprone.BugCheckerRefactoringTestHelper.TestMode;
 import com.google.errorprone.CompilationTestHelper;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +34,6 @@ final class CaffeineLoadingCacheRefactoringTest {
         compilationHelper().addSourceLines(path, lines).matchAllDiagnostics().doTest();
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_methods() {
         // language=java
@@ -57,11 +55,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_passed_as_method_argument() {
         // language=java
@@ -82,11 +79,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 private void doSomething(LoadingCache<String, String> c) {}
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_cache_passed_to_constructor() {
         // language=java
@@ -109,11 +105,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_builder_methods() {
         // language=java
@@ -137,11 +132,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void disallowed_non_fluent_builder() {
         // language=java
@@ -163,11 +157,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                 private String load(String key) { return key; }
             }
             """.stripIndent();
-        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_null_checks_on_cache_reads() {
         // language=java
@@ -229,11 +222,94 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
+    @Test
+    void handles_existing_preconditions_check_on_cache_reads() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.logsafe.Preconditions;
+            import java.util.concurrent.Executors;
+            import java.util.Objects;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+
+                String getValueLogsafe(String key) {
+                    return Preconditions.checkNotNull(cache.get(key));
+                }
+
+                String getValueGuava(String key) {
+                    return com.google.common.base.Preconditions.checkNotNull(cache.get(key));
+                }
+
+                String getValueObjects(String key) {
+                    return Objects.requireNonNull(cache.get(key));
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import com.palantir.logsafe.Preconditions;
+                        import java.util.Objects;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+
+                            String getValueLogsafe(String key) {
+                                return Preconditions.checkNotNull(cache.get(key));
+                            }
+
+                            String getValueGuava(String key) {
+                                return com.google.common.base.Preconditions.checkNotNull(cache.get(key));
+                            }
+
+                            String getValueObjects(String key) {
+                                return Objects.requireNonNull(cache.get(key));
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
     @Test
     void refactors_simple_loading_cache() {
         // language=java
@@ -286,11 +362,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void infers_cache_name() {
         // language=java
@@ -345,11 +420,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_default_maximum_size() {
         // language=java
@@ -401,11 +475,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_write_duration() {
         // language=java
@@ -462,11 +535,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_write_time_unit() {
         // language=java
@@ -524,11 +596,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_access_duration() {
         // language=java
@@ -585,11 +656,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_expire_after_access_time_unit() {
         // language=java
@@ -647,11 +717,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_cache_stats_wrapper() {
         // language=java
@@ -710,11 +779,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void handles_legacy_cache_name() {
         // language=java
@@ -778,11 +846,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void nested_type_params_on_cache_type_params_are_preserved() {
         // language=java
@@ -839,11 +906,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void refactors_multiple_caches_in_same_class() {
         // language=java
@@ -920,11 +986,10 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 
-    @SuppressWarnings("for-rollout:deprecation")
     @Test
     void refactors_multiple_caches_in_multiple_classes() {
         // language=java
@@ -1038,7 +1103,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                         }
                         """.stripIndent())
                 .addOutputLines("Test.java", output)
-                .doTest(TestMode.TEXT_MATCH);
+                .doTest();
         assertCompiles("Test.java", output);
     }
 }
