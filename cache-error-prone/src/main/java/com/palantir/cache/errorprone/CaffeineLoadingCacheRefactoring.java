@@ -360,6 +360,7 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                     return Boolean.TRUE.equals(lhs) || Boolean.TRUE.equals(rhs);
                                 }
 
+                                @SuppressWarnings("CyclomaticComplexity")
                                 @Override
                                 public Boolean visitMethodInvocation(MethodInvocationTree tree, Void _unused) {
                                     // check if the cache symbol is passed as an argument to any method call;
