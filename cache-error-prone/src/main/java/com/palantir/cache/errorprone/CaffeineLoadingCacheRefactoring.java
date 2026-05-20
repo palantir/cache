@@ -33,6 +33,7 @@ import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodInvocationTree;
+import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.ParameterizedTypeTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
@@ -339,6 +340,18 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
 
                                 @Override
                                 public Boolean visitMethodInvocation(MethodInvocationTree tree, Void _unused) {
+                                    // check if the cache symbol is passed as an argument to any method call;
+                                    // if so, we can't safely refactor it because the callee expects the
+                                    // original type.
+                                    // TODO(blaub): this is conservative — we could allow cases where the
+                                    // symbol remains within the same compilation unit (e.g. private helpers)
+                                    for (ExpressionTree arg : tree.getArguments()) {
+                                        Symbol argSymbol = ASTHelpers.getSymbol(arg);
+                                        if (varSymbol.equals(argSymbol)) {
+                                            return true;
+                                        }
+                                    }
+
                                     ExpressionTree receiver = ASTHelpers.getReceiver(tree);
                                     Symbol thisSymbol = ASTHelpers.getSymbol(receiver);
                                     if (thisSymbol != null) {
@@ -367,6 +380,17 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                         }
                                     }
                                     return super.visitMethodInvocation(tree, null);
+                                }
+
+                                @Override
+                                public Boolean visitNewClass(NewClassTree tree, Void _unused) {
+                                    for (ExpressionTree arg : tree.getArguments()) {
+                                        Symbol argSymbol = ASTHelpers.getSymbol(arg);
+                                        if (varSymbol.equals(argSymbol)) {
+                                            return true;
+                                        }
+                                    }
+                                    return super.visitNewClass(tree, null);
                                 }
                             },
                             null);

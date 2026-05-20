@@ -63,6 +63,58 @@ final class CaffeineLoadingCacheRefactoringTest {
 
     @SuppressWarnings("for-rollout:deprecation")
     @Test
+    void disallowed_cache_passed_as_method_argument() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            class Test {
+                private LoadingCache<String, String> cache;
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .build(this::load);
+                }
+                private String load(String key) { return key; }
+                void useCache() {
+                    doSomething(cache);
+                }
+                private void doSomething(LoadingCache<String, String> c) {}
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        assertCompiles("Test.java", input);
+    }
+
+    @SuppressWarnings("for-rollout:deprecation")
+    @Test
+    void disallowed_cache_passed_to_constructor() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            class Test {
+                private LoadingCache<String, String> cache;
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .build(this::load);
+                }
+                private String load(String key) { return key; }
+                void useCache() {
+                    SomeWrapper wrapper = new SomeWrapper(cache);
+                }
+                static class SomeWrapper {
+                    SomeWrapper(LoadingCache<String, String> c) {}
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest(TestMode.TEXT_MATCH);
+        assertCompiles("Test.java", input);
+    }
+
+    @SuppressWarnings("for-rollout:deprecation")
+    @Test
     void disallowed_builder_methods() {
         // language=java
         String input = """
