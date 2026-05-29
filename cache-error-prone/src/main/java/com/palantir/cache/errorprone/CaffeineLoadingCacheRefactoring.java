@@ -32,6 +32,8 @@ import com.google.errorprone.util.ASTHelpers;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.LambdaExpressionTree;
+import com.sun.source.tree.MemberReferenceTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.ParameterizedTypeTree;
@@ -284,6 +286,13 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
     public Description matchMethodInvocation(MethodInvocationTree tree, VisitorState state) {
         // are we looking at Caffeine.newBuilder()...build(CacheLoader)?
         if (!CAFFEINE_LOADING_CACHE_BUILD.matches(tree, state)) {
+            return Description.NO_MATCH;
+        }
+
+        // only proceed if the loader argument is a lambda or method reference; explicit CacheLoader subtypes
+        // cannot be automatically rewritten to com.palantir.cache.CacheLoader
+        ExpressionTree loaderArg = Iterables.getOnlyElement(tree.getArguments());
+        if (!(loaderArg instanceof LambdaExpressionTree) && !(loaderArg instanceof MemberReferenceTree)) {
             return Description.NO_MATCH;
         }
 

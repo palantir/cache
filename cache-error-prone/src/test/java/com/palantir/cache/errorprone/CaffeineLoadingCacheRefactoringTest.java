@@ -1106,4 +1106,33 @@ final class CaffeineLoadingCacheRefactoringTest {
                 .doTest();
         assertCompiles("Test.java", output);
     }
+
+    @Test
+    void disallowed_explicit_cache_loader_subclass() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.CacheLoader;
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+
+            class Test {
+                private static final class MyCacheLoader implements CacheLoader<String, String> {
+                    @Override
+                    public String load(String key) {
+                        return key;
+                    }
+                }
+
+                private LoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .build(new MyCacheLoader());
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
+        assertCompiles("Test.java", input);
+    }
 }
