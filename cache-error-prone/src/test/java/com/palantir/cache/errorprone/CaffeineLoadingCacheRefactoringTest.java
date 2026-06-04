@@ -1108,6 +1108,71 @@ final class CaffeineLoadingCacheRefactoringTest {
     }
 
     @Test
+    void handles_expiry_name_clash_with_caffeine_expiry() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.time.Duration;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                @SuppressWarnings("unused")
+                private Expiry<String, String> expiry;
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .expiry(com.palantir.cache.Expiry.afterWrite(Duration.ofMinutes(1)))
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.Expiry;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import java.time.Duration;
+
+                        class Test {
+                            @SuppressWarnings("unused")
+                            private Expiry<String, String> expiry;
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .expireAfterWrite(Duration.ofMinutes(1))
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
     void disallowed_explicit_cache_loader_subclass() {
         // language=java
         String input = """

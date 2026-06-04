@@ -553,10 +553,15 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         spec.expiryArg()
                 .ifPresentOrElse(
                         expiryArg -> {
-                            replacement.append(".expiry(").append(expiryArg).append(")");
-                            // make sure we add imports for Duration, and com.palantir.cache.Expiry
+                            String expiryType =
+                                    SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Expiry");
+                            replacement
+                                    .append(".expiry(")
+                                    .append(expiryType)
+                                    .append(".")
+                                    .append(expiryArg)
+                                    .append(")");
                             fixBuilder.addImport("java.time.Duration");
-                            fixBuilder.addImport("com.palantir.cache.Expiry");
                         },
                         () -> replacement.append(".noExpiry()"));
         spec.metricsArg()
@@ -802,11 +807,11 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         }
 
         String formatExpiry(String durationArg) {
-            return "Expiry.after" + suffix + "(" + durationArg + ")";
+            return "after" + suffix + "(" + durationArg + ")";
         }
 
         String formatExpiry(String durationArg, String timeUnitArg) {
-            return "Expiry.after" + suffix + "(Duration.of(" + durationArg + ", " + timeUnitArg + ".toChronoUnit()))";
+            return "after" + suffix + "(Duration.of(" + durationArg + ", " + timeUnitArg + ".toChronoUnit()))";
         }
     }
 
