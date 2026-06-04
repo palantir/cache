@@ -553,8 +553,8 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         spec.expiryArg()
                 .ifPresentOrElse(
                         expiryArg -> {
-                            String expiryType = SuggestedFixes.qualifyType(
-                                    state, fixBuilder, "com.palantir.cache.Expiry");
+                            String expiryType =
+                                    SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Expiry");
                             replacement
                                     .append(".expiry(")
                                     .append(expiryType)
