@@ -542,8 +542,8 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                     fixBuilder,
                     state,
                     "for-rollout:deprecation",
-                    "legacyName() is used to preserve metric flows for existing caches; consider changing the cache"
-                            + " name to one compatible with com.palantir.cache.CacheBuilder#name()",
+                    "legacyName() is deprecated, but used to preserve metric flows for existing caches; consider"
+                            + " changing the cache name to one compatible with com.palantir.cache.CacheBuilder#name()",
                     true);
             replacement.append(".legacyName(").append(spec.nameArg().name()).append(")");
         } else {
