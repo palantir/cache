@@ -199,24 +199,15 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 .named("expireAfterAccess")
                 .withParameters(long.class.getName(), TimeUnit.class.getName());
 
-        // we don't currently support calls to `.expireAfter(Expiry)`
-        // although the palantir cache library exposes an interface that is 1-1 compatible with Caffeine's and we could
-        // do this in a straightforward way, there are quite a few edge cases to handle within errorprone depending on
-        // how an Expiry object is handed to the builder.
-        // this should be doable and is a future optimization, but to keep things simple right now we just skip it.
-        // TODO(blaub): add this in when we're ready to handle expireAfter() calls correctly
-        //        private static final Matcher<ExpressionTree> EXPIRE_AFTER = Matchers.instanceMethod()
-        //                    .onDescendantOf(CAFFEINE_CLASS)
-        //                    .named("expireAfter")
-        //                    .withParameters("com.github.benmanes.caffeine.cache.Expiry");
+        private static final Matcher<ExpressionTree> EXPIRE_AFTER = Matchers.instanceMethod()
+                .onDescendantOf(CAFFEINE_CLASS)
+                .named("expireAfter")
+                .withParameters("com.github.benmanes.caffeine.cache.Expiry");
 
-        // we also don't currently handle `.ticker(Ticker)` calls, for the same reasons as `.expireAfter(Expiry)`.
-        // this is a future optimization
-        // TODO(blaub): add this in when we're ready to handle ticker() calls correctly
-        //        private static final Matcher<ExpressionTree> TICKER = Matchers.instanceMethod()
-        //                    .onDescendantOf(CAFFEINE_CLASS)
-        //                    .named("ticker")
-        //                    .withParameters("com.github.benmanes.caffeine.cache.Ticker");
+        private static final Matcher<ExpressionTree> TICKER = Matchers.instanceMethod()
+                .onDescendantOf(CAFFEINE_CLASS)
+                .named("ticker")
+                .withParameters("com.github.benmanes.caffeine.cache.Ticker");
 
         // recordStats() is allowed, but gets removed since we already scaffold metrics directly in com.palantir.cache
         private static final Matcher<ExpressionTree> RECORD_STATS = Matchers.instanceMethod()
@@ -236,9 +227,8 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 EXPIRE_AFTER_WRITE_TIME_UNIT,
                 EXPIRE_AFTER_ACCESS_DURATION,
                 EXPIRE_AFTER_ACCESS_TIME_UNIT,
-                // see notes above
-                //                EXPIRE_AFTER,
-                //                TICKER,
+                EXPIRE_AFTER,
+                TICKER,
                 RECORD_STATS,
                 RECORD_STATS_SUPPLIER);
     }
@@ -260,6 +250,11 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 GUAVA_PRECONDITIONS_CHECK_NOT_NULL,
                 JAVA_UTIL_OBJECTS_REQUIRE_NON_NULL);
     }
+
+    private static final Matcher<ExpressionTree> CAFFEINE_TICKER_SYSTEM = Matchers.staticMethod()
+            .onClass("com.github.benmanes.caffeine.cache.Ticker")
+            .named("systemTicker")
+            .withNoParameters();
 
     private static final String CACHE_STATS_CLASS = "com.palantir.tritium.metrics.caffeine.CacheStats";
 
@@ -500,6 +495,7 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         specBuilder.executorArg("_name -> " + executorsType + ".newCachedThreadPool()");
 
         // try to capture arguments from existing builder methods
+        boolean[] cannotConvert = {false};
         ASTHelpers.streamReceivers(buildCall).forEach(builderCallTree -> {
             if (AllowedBuilderMethods.MAXIMUM_SIZE.matches(builderCallTree, state)) {
                 // convert "maximumSize(long)" -> "maximumSize(long)"
@@ -521,8 +517,30 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 if (builderCallTree instanceof MethodInvocationTree t) {
                     getExpiryArgForExpireAfter(t, state, WriteOrAccess.ACCESS).ifPresent(specBuilder::expiryArg);
                 }
+            } else if (AllowedBuilderMethods.EXPIRE_AFTER.matches(builderCallTree, state)) {
+                if (builderCallTree instanceof MethodInvocationTree t) {
+                    Optional<String> customExpiry = getExpiryArgForExpireAfterCustom(t, state, fixBuilder);
+                    if (customExpiry.isPresent()) {
+                        specBuilder.rawExpiryArg(customExpiry.get());
+                    } else {
+                        cannotConvert[0] = true;
+                    }
+                }
+            } else if (AllowedBuilderMethods.TICKER.matches(builderCallTree, state)) {
+                if (builderCallTree instanceof MethodInvocationTree t) {
+                    Optional<String> tickerArg = getTickerArg(t, state, fixBuilder);
+                    if (tickerArg.isPresent()) {
+                        specBuilder.tickerArg(tickerArg.get());
+                    } else {
+                        cannotConvert[0] = true;
+                    }
+                }
             }
         });
+
+        if (cannotConvert[0]) {
+            return Optional.empty();
+        }
 
         CacheBuilderSpec spec = specBuilder.build();
 
@@ -550,20 +568,24 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             replacement.append(".name(").append(spec.nameArg().name()).append(")");
         }
         replacement.append(".maximumSize(").append(spec.maximumSizeArg()).append(")");
-        spec.expiryArg()
-                .ifPresentOrElse(
-                        expiryArg -> {
-                            String expiryType =
-                                    SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Expiry");
-                            replacement
-                                    .append(".expiry(")
-                                    .append(expiryType)
-                                    .append(".")
-                                    .append(expiryArg)
-                                    .append(")");
-                            fixBuilder.addImport("java.time.Duration");
-                        },
-                        () -> replacement.append(".noExpiry()"));
+        if (spec.rawExpiryArg().isPresent()) {
+            replacement.append(".expiry(").append(spec.rawExpiryArg().get()).append(")");
+        } else {
+            spec.expiryArg()
+                    .ifPresentOrElse(
+                            expiryArg -> {
+                                String expiryType =
+                                        SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Expiry");
+                                replacement
+                                        .append(".expiry(")
+                                        .append(expiryType)
+                                        .append(".")
+                                        .append(expiryArg)
+                                        .append(")");
+                                fixBuilder.addImport("java.time.Duration");
+                            },
+                            () -> replacement.append(".noExpiry()"));
+        }
         spec.metricsArg()
                 .ifPresentOrElse(
                         metricsArg -> replacement
@@ -572,9 +594,9 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                                 .append(")"),
                         () -> replacement.append(".noMetrics()"));
         replacement.append(".executor(").append(spec.executorArg()).append(")");
-        //        spec.tickerArg()
-        //                .ifPresent(tickerArg ->
-        //                        replacement.append(".ticker(").append(tickerArg).append(")"));
+        spec.tickerArg()
+                .ifPresent(tickerArg ->
+                        replacement.append(".ticker(").append(tickerArg).append(")"));
         replacement.append(".buildAsyncWithLoader(").append(spec.loaderArg()).append(")");
 
         // if we are wrapped in a "CacheStats.of(...).register(...)", then look for that and replace that whole tree;
@@ -742,6 +764,55 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         return Optional.empty();
     }
 
+    private Optional<String> getTickerArg(
+            MethodInvocationTree tickerTree, VisitorState state, SuggestedFix.Builder fixBuilder) {
+        ExpressionTree arg = Iterables.getOnlyElement(tickerTree.getArguments());
+
+        if (arg instanceof LambdaExpressionTree || arg instanceof MemberReferenceTree) {
+            return Optional.ofNullable(state.getSourceForNode(arg));
+        }
+
+        if (arg instanceof MethodInvocationTree argMit && CAFFEINE_TICKER_SYSTEM.matches(argMit, state)) {
+            String tickerType = SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Ticker");
+            return Optional.of(tickerType + ".system()");
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<String> getExpiryArgForExpireAfterCustom(
+            MethodInvocationTree expiryTree, VisitorState state, SuggestedFix.Builder fixBuilder) {
+        ExpressionTree arg = Iterables.getOnlyElement(expiryTree.getArguments());
+
+        if (!(arg instanceof NewClassTree newClassTree) || newClassTree.getClassBody() == null) {
+            return Optional.empty();
+        }
+
+        Symbol classSymbol = ASTHelpers.getSymbol(newClassTree.getIdentifier());
+        if (classSymbol == null
+                || !classSymbol.getQualifiedName().contentEquals("com.github.benmanes.caffeine.cache.Expiry")) {
+            return Optional.empty();
+        }
+
+        String palantirExpiryType = SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Expiry");
+
+        String typeParamsSuffix = "";
+        if (newClassTree.getIdentifier() instanceof ParameterizedTypeTree paramTree) {
+            String fullIdentifierSource = state.getSourceForNode(paramTree);
+            String rawTypeSource = state.getSourceForNode(paramTree.getType());
+            if (fullIdentifierSource != null && rawTypeSource != null) {
+                typeParamsSuffix = fullIdentifierSource.substring(rawTypeSource.length());
+            }
+        }
+
+        String classBody = state.getSourceForNode(newClassTree.getClassBody());
+        if (classBody == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of("new " + palantirExpiryType + typeParamsSuffix + "() " + classBody);
+    }
+
     // given a VarSymbol, change the declared type to the given class
     // newType is a string containing the fully-qualified class name for the new type
     // if the existing type is a parameterized type, the type parameters are retained unless newTypeParams is present
@@ -829,11 +900,13 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
 
         Optional<String> expiryArg();
 
+        Optional<String> rawExpiryArg();
+
         Optional<String> metricsArg();
 
         String executorArg();
 
-        // Optional<String> tickerArg();
+        Optional<String> tickerArg();
 
         String loaderArg();
     }
