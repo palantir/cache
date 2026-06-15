@@ -777,6 +777,18 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             return Optional.of(tickerType + ".system()");
         }
 
+        if (arg instanceof NewClassTree newClassTree && newClassTree.getClassBody() != null) {
+            Symbol classSymbol = ASTHelpers.getSymbol(newClassTree.getIdentifier());
+            if (classSymbol != null
+                    && classSymbol.getQualifiedName().contentEquals("com.github.benmanes.caffeine.cache.Ticker")) {
+                String palantirTickerType = SuggestedFixes.qualifyType(state, fixBuilder, "com.palantir.cache.Ticker");
+                String classBody = state.getSourceForNode(newClassTree.getClassBody());
+                if (classBody != null) {
+                    return Optional.of("new " + palantirTickerType + "() " + classBody);
+                }
+            }
+        }
+
         return Optional.empty();
     }
 

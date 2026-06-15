@@ -1504,6 +1504,76 @@ final class CaffeineLoadingCacheRefactoringTest {
     }
 
     @Test
+    void handles_ticker_anonymous_class() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.github.benmanes.caffeine.cache.Ticker;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(new com.palantir.cache.Ticker() {
+                                        @Override
+                                        public long read() {
+                                            return System.nanoTime();
+                                        }
+                                    })
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import com.github.benmanes.caffeine.cache.Ticker;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(new Ticker() {
+                                            @Override
+                                            public long read() {
+                                                return System.nanoTime();
+                                            }
+                                        })
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
     void disallowed_ticker_variable() {
         // language=java
         String input = """
