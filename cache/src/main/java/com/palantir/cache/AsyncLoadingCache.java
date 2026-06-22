@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values.
  */
-public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
+public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncCache<K, V> {
 
     /**
      * Returns the value associated with the {@code key} in this cache, obtaining that value from
@@ -53,6 +53,5 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
      * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping is left
      *         unestablished
      */
-    @Nullable
     V get(K key);
 }

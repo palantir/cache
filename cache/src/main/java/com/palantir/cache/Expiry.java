@@ -16,6 +16,7 @@
 package com.palantir.cache;
 
 import java.time.Duration;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Calculates when cache entries expire. A single expiration time is retained so that the lifetime
@@ -24,7 +25,7 @@ import java.time.Duration;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public interface Expiry<K, V> {
+public interface Expiry<K, V extends @Nullable Object> {
 
     /**
      * Specifies that the entry should be automatically removed from the cache once the duration has

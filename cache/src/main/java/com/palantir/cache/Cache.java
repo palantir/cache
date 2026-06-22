@@ -19,17 +19,18 @@ package com.palantir.cache;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.CompileTimeConstant;
 import com.palantir.tritium.metrics.registry.TaggedMetricRegistry;
+import org.jspecify.annotations.Nullable;
 
 public enum Cache {
     ;
 
     @CheckReturnValue
-    public static <K, V> NameBuilder<K, V> builder() {
+    public static <K, V extends @Nullable Object> NameBuilder<K, V> builder() {
         return new CacheBuilder<>();
     }
 
     @CheckReturnValue
-    public interface NameBuilder<K, V> {
+    public interface NameBuilder<K, V extends @Nullable Object> {
 
         /**
          * Set the cache name, which will be used for metrics and observability.
@@ -52,7 +53,7 @@ public enum Cache {
     }
 
     @CheckReturnValue
-    public interface SizeBuilder<K, V> {
+    public interface SizeBuilder<K, V extends @Nullable Object> {
 
         ExpiryBuilder<K, V> maximumSize(long maximumSize);
 
@@ -60,7 +61,7 @@ public enum Cache {
     }
 
     @CheckReturnValue
-    public interface ExpiryBuilder<K, V> {
+    public interface ExpiryBuilder<K, V extends @Nullable Object> {
 
         MetricsBuilder<K, V> expiry(Expiry<? super K, ? super V> expiry);
 
@@ -68,7 +69,7 @@ public enum Cache {
     }
 
     @CheckReturnValue
-    public interface MetricsBuilder<K, V> {
+    public interface MetricsBuilder<K, V extends @Nullable Object> {
 
         ExecutorBuilder<K, V> metrics(TaggedMetricRegistry taggedMetrics);
 
@@ -76,13 +77,13 @@ public enum Cache {
     }
 
     @CheckReturnValue
-    public interface ExecutorBuilder<K, V> {
+    public interface ExecutorBuilder<K, V extends @Nullable Object> {
 
         Builder<K, V> executor(ExecutorFactory executorFactory);
     }
 
     @CheckReturnValue
-    public interface Builder<K, V> {
+    public interface Builder<K, V extends @Nullable Object> {
 
         Builder<K, V> ticker(Ticker ticker);
 

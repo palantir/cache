@@ -17,7 +17,6 @@
 package com.palantir.cache;
 
 import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
 
 class SyncLoadingCacheImpl<K, V> extends SyncCacheImpl<K, V> implements SyncLoadingCache<K, V> {
 
@@ -29,7 +28,6 @@ class SyncLoadingCacheImpl<K, V> extends SyncCacheImpl<K, V> implements SyncLoad
     }
 
     @Override
-    @Nullable
     public final V get(K key) {
         return get(key, mappingFunction);
     }

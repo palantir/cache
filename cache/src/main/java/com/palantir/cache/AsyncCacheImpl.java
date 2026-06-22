@@ -51,7 +51,6 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     }
 
     @Override
-    @Nullable
     public final V get(K key, Function<? super K, ? extends V> mappingFunction) {
         CompletableFuture<V> future;
         try (Loader<K, V> loader = loader(mappingFunction)) {

@@ -19,7 +19,7 @@ package com.palantir.cache;
 import com.google.common.util.concurrent.MoreExecutors;
 import java.util.concurrent.Executor;
 
-public enum DirectExecutorFactory implements ExecutorFactory {
+enum DirectExecutorFactory implements ExecutorFactory {
     INSTANCE;
 
     @Override
