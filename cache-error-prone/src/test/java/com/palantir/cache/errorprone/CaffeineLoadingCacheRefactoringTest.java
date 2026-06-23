@@ -1200,4 +1200,796 @@ final class CaffeineLoadingCacheRefactoringTest {
         refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
         assertCompiles("Test.java", input);
     }
+
+    @Test
+    void handles_ticker_lambda() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(() -> System.nanoTime())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(() -> System.nanoTime())
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_ticker_method_reference() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(System::nanoTime)
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(System::nanoTime)
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_ticker_system_ticker() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.cache.Ticker;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(Ticker.system())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(com.github.benmanes.caffeine.cache.Ticker.systemTicker())
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_ticker_system_ticker_with_import_conflict() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.github.benmanes.caffeine.cache.Ticker;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                @SuppressWarnings("unused")
+                private Ticker ticker;
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(com.palantir.cache.Ticker.system())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import com.github.benmanes.caffeine.cache.Ticker;
+
+                        class Test {
+                            @SuppressWarnings("unused")
+                            private Ticker ticker;
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(Ticker.systemTicker())
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_ticker_with_expiry() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.cache.Expiry;
+            import com.palantir.cache.Ticker;
+            import java.time.Duration;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .expiry(Expiry.afterWrite(Duration.ofMinutes(1)))
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(Ticker.system())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import java.time.Duration;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .expireAfterWrite(Duration.ofMinutes(1))
+                                        .ticker(com.github.benmanes.caffeine.cache.Ticker.systemTicker())
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_ticker_anonymous_class() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.github.benmanes.caffeine.cache.Ticker;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .noExpiry()
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(new com.palantir.cache.Ticker() {
+                                        @Override
+                                        public long read() {
+                                            return System.nanoTime();
+                                        }
+                                    })
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+                        import com.github.benmanes.caffeine.cache.Ticker;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .ticker(new Ticker() {
+                                            @Override
+                                            public long read() {
+                                                return System.nanoTime();
+                                            }
+                                        })
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void disallowed_ticker_variable() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.github.benmanes.caffeine.cache.Ticker;
+
+            class Test {
+                private final Ticker ticker = Ticker.systemTicker();
+                private LoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .ticker(ticker)
+                            .build(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
+        assertCompiles("Test.java", input);
+    }
+
+    @Test
+    void disallowed_ticker_method_call() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.github.benmanes.caffeine.cache.Ticker;
+
+            class Test {
+                private LoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .ticker(getCustomTicker())
+                            .build(this::load);
+                }
+
+                private Ticker getCustomTicker() {
+                    return Ticker.systemTicker();
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
+        assertCompiles("Test.java", input);
+    }
+
+    @Test
+    void handles_expire_after_anonymous_class() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .expiry(new com.palantir.cache.Expiry<String, String>() {
+                                        @Override
+                                        public long expireAfterCreate(String key, String value, long currentTime) {
+                                            return 1_000_000_000L;
+                                        }
+                                        @Override
+                                        public long expireAfterUpdate(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                        @Override
+                                        public long expireAfterRead(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                    })
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.Expiry;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .expireAfter(new Expiry<String, String>() {
+                                            @Override
+                                            public long expireAfterCreate(String key, String value, long currentTime) {
+                                                return 1_000_000_000L;
+                                            }
+                                            @Override
+                                            public long expireAfterUpdate(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                            @Override
+                                            public long expireAfterRead(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                        })
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_expire_after_anonymous_class_with_import_conflict() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                @SuppressWarnings("unused")
+                private Expiry<String, String> otherExpiry;
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .expiry(new com.palantir.cache.Expiry<String, String>() {
+                                        @Override
+                                        public long expireAfterCreate(String key, String value, long currentTime) {
+                                            return 1_000_000_000L;
+                                        }
+                                        @Override
+                                        public long expireAfterUpdate(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                        @Override
+                                        public long expireAfterRead(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                    })
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.Expiry;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            @SuppressWarnings("unused")
+                            private Expiry<String, String> otherExpiry;
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .expireAfter(new Expiry<String, String>() {
+                                            @Override
+                                            public long expireAfterCreate(String key, String value, long currentTime) {
+                                                return 1_000_000_000L;
+                                            }
+                                            @Override
+                                            public long expireAfterUpdate(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                            @Override
+                                            public long expireAfterRead(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                        })
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void handles_expire_after_anonymous_class_with_ticker() {
+        // language=java
+        String output = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+            import com.palantir.cache.AsyncLoadingCache;
+            import com.palantir.cache.Cache;
+            import com.palantir.cache.Ticker;
+            import java.util.concurrent.Executors;
+
+            class Test {
+                private AsyncLoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache =
+                            Cache.<String, String>builder()
+                                    .name("test-cache-0")
+                                    .maximumSize(100)
+                                    .expiry(new com.palantir.cache.Expiry<String, String>() {
+                                        @Override
+                                        public long expireAfterCreate(String key, String value, long currentTime) {
+                                            return 1_000_000_000L;
+                                        }
+                                        @Override
+                                        public long expireAfterUpdate(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                        @Override
+                                        public long expireAfterRead(
+                                                String key, String value, long currentTime, long currentDuration) {
+                                            return currentDuration;
+                                        }
+                                    })
+                                    .noMetrics()
+                                    .executor(_name -> Executors.newCachedThreadPool())
+                                    .ticker(Ticker.system())
+                                    .buildAsyncWithLoader(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper()
+                .addInputLines(
+                        "Test.java",
+                        // language=java
+                        """
+                        import com.github.benmanes.caffeine.cache.Caffeine;
+                        import com.github.benmanes.caffeine.cache.Expiry;
+                        import com.github.benmanes.caffeine.cache.LoadingCache;
+
+                        class Test {
+                            private LoadingCache<String, String> cache;
+
+                            void setupCache() {
+                                this.cache = Caffeine.newBuilder()
+                                        .maximumSize(100)
+                                        .expireAfter(new Expiry<String, String>() {
+                                            @Override
+                                            public long expireAfterCreate(String key, String value, long currentTime) {
+                                                return 1_000_000_000L;
+                                            }
+                                            @Override
+                                            public long expireAfterUpdate(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                            @Override
+                                            public long expireAfterRead(
+                                                    String key, String value, long currentTime, long currentDuration) {
+                                                return currentDuration;
+                                            }
+                                        })
+                                        .ticker(com.github.benmanes.caffeine.cache.Ticker.systemTicker())
+                                        .build(this::load);
+                            }
+
+                            private String load(String key) {
+                                return key;
+                            }
+                        }
+                        """.stripIndent())
+                .addOutputLines("Test.java", output)
+                .doTest();
+        assertCompiles("Test.java", output);
+    }
+
+    @Test
+    void disallowed_expire_after_variable() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+
+            class Test {
+                private final Expiry<String, String> expiry = new Expiry<>() {
+                    @Override
+                    public long expireAfterCreate(String key, String value, long currentTime) {
+                        return 1_000_000_000L;
+                    }
+                    @Override
+                    public long expireAfterUpdate(
+                            String key, String value, long currentTime, long currentDuration) {
+                        return currentDuration;
+                    }
+                    @Override
+                    public long expireAfterRead(
+                            String key, String value, long currentTime, long currentDuration) {
+                        return currentDuration;
+                    }
+                };
+                private LoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .expireAfter(expiry)
+                            .build(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
+        assertCompiles("Test.java", input);
+    }
+
+    @Test
+    void disallowed_expire_after_named_class() {
+        // language=java
+        String input = """
+            import com.github.benmanes.caffeine.cache.Caffeine;
+            import com.github.benmanes.caffeine.cache.Expiry;
+            import com.github.benmanes.caffeine.cache.LoadingCache;
+
+            class Test {
+                private static final class MyExpiry implements Expiry<String, String> {
+                    @Override
+                    public long expireAfterCreate(String key, String value, long currentTime) {
+                        return 1_000_000_000L;
+                    }
+                    @Override
+                    public long expireAfterUpdate(
+                            String key, String value, long currentTime, long currentDuration) {
+                        return currentDuration;
+                    }
+                    @Override
+                    public long expireAfterRead(
+                            String key, String value, long currentTime, long currentDuration) {
+                        return currentDuration;
+                    }
+                }
+
+                private LoadingCache<String, String> cache;
+
+                void setupCache() {
+                    this.cache = Caffeine.newBuilder()
+                            .maximumSize(100)
+                            .expireAfter(new MyExpiry())
+                            .build(this::load);
+                }
+
+                private String load(String key) {
+                    return key;
+                }
+            }
+            """.stripIndent();
+        refactoringHelper().addInputLines("Test.java", input).expectUnchanged().doTest();
+        assertCompiles("Test.java", input);
+    }
 }
