@@ -1,4 +1,10 @@
 acceptedBreaks:
+  "0.10.0":
+    com.palantir.cache:cache:
+    - code: "java.class.visibilityReduced"
+      old: "enum com.palantir.cache.DirectExecutorFactory"
+      new: "enum com.palantir.cache.DirectExecutorFactory"
+      justification: "DirectExecutorFactory should never have been public"
   "0.3.0":
     com.palantir.cache:cache:
     - code: "java.method.addedToInterface"
