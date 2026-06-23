@@ -20,10 +20,14 @@ import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-public interface BulkCacheLoader<K, V> extends CacheLoader<K, V> {
+public interface BulkCacheLoader<K, V extends @Nullable Object> extends CacheLoader<K, V> {
 
     @Override
-    @Nullable
+    /*
+     * If loadAll() may ever return partial results, then calls to load() may return null. In that case, the type of
+     * this cache loader should be declared as CacheLoader<Foo, @Nullable Bar> rather than CacheLoader<Foo, Bar>.
+     */
+    @SuppressWarnings("NullAway")
     default V load(K key) {
         return loadAll(Set.of(key)).get(key);
     }

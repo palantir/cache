@@ -38,7 +38,6 @@ class SyncCacheImpl<K, V> implements SyncCache<K, V> {
     }
 
     @Override
-    @Nullable
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
         return cache.get(key, mappingFunction);
     }

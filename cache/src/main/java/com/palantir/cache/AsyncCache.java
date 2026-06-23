@@ -31,7 +31,7 @@ import org.jspecify.annotations.Nullable;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values.
  */
-public interface AsyncCache<K, V> {
+public interface AsyncCache<K, V extends @Nullable Object> {
 
     /**
      * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no cached value for
@@ -68,7 +68,6 @@ public interface AsyncCache<K, V> {
      *         otherwise never complete
      * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is left unestablished
      */
-    @Nullable
     V get(K key, Function<? super K, ? extends V> mappingFunction);
 
     /**

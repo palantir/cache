@@ -15,6 +15,8 @@
  */
 package com.palantir.cache;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Calculates the weights of cache entries. The total weight threshold is used to determine when an
  * eviction is required.
@@ -22,7 +24,7 @@ package com.palantir.cache;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public interface Weigher<K, V> {
+public interface Weigher<K, V extends @Nullable Object> {
 
     /**
      * Returns the weight of a cache entry. There is no unit for entry weights; rather they are simply
@@ -42,7 +44,7 @@ public interface Weigher<K, V> {
      * @return a weigher where an entry has a weight of {@code 1}
      */
     @SuppressWarnings("unchecked")
-    static <K, V> Weigher<K, V> singleton() {
+    static <K, V extends @Nullable Object> Weigher<K, V> singleton() {
         return (Weigher<K, V>) SingletonWeigher.INSTANCE;
     }
 }

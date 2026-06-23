@@ -19,6 +19,7 @@ package com.palantir.cache;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A cache that loads values asynchronousky using the provided executor and stores {@link Future} wrapped values in the
@@ -28,7 +29,7 @@ import java.util.concurrent.Future;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values.
  */
-public interface AsyncBulkLoadingCache<K, V> extends AsyncLoadingCache<K, V> {
+public interface AsyncBulkLoadingCache<K, V extends @Nullable Object> extends AsyncLoadingCache<K, V> {
 
     /**
      * Returns a map of the values associated with the {@code keys}, creating or retrieving those values if necessary.

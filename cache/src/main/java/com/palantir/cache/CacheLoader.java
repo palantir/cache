@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public interface CacheLoader<K, V> {
+public interface CacheLoader<K, V extends @Nullable Object> {
 
     /**
      * Computes or retrieves the value corresponding to {@code key}.
@@ -34,6 +34,5 @@ public interface CacheLoader<K, V> {
      * @param key the non-null key whose value should be loaded
      * @return the value associated with {@code key} or {@code null} if not found
      */
-    @Nullable
     V load(K key);
 }

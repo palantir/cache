@@ -17,7 +17,6 @@
 package com.palantir.cache;
 
 import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
 
 class AsyncLoadingCacheImpl<K, V> extends AsyncCacheImpl<K, V> implements AsyncLoadingCache<K, V> {
 
@@ -30,7 +29,6 @@ class AsyncLoadingCacheImpl<K, V> extends AsyncCacheImpl<K, V> implements AsyncL
     }
 
     @Override
-    @Nullable
     public final V get(K key) {
         return get(key, mappingFunction);
     }
