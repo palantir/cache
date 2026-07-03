@@ -446,6 +446,7 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
             nextInferredNameSuffix = 0;
         }
 
+        @SuppressWarnings("for-rollout:NullAway")
         Optional<String> inferredName = inferNameArg(enclosingClass);
         // we should always be able to derive a name for the cache, even if we end up not using it
         // if we can't, then we can't actually refactor this cache
