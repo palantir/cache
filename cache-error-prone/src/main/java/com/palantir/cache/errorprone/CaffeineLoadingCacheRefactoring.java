@@ -47,12 +47,10 @@ import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -233,24 +231,6 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
                 RECORD_STATS_SUPPLIER);
     }
 
-    private static final class NullChecks {
-        private static final Matcher<ExpressionTree> LOGSAFE_PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
-                .onClass("com.palantir.logsafe.Preconditions")
-                .named("checkNotNull");
-
-        private static final Matcher<ExpressionTree> GUAVA_PRECONDITIONS_CHECK_NOT_NULL = Matchers.staticMethod()
-                .onClass("com.google.common.base.Preconditions")
-                .named("checkNotNull");
-
-        private static final Matcher<ExpressionTree> JAVA_UTIL_OBJECTS_REQUIRE_NON_NULL =
-                Matchers.staticMethod().onClass("java.util.Objects").named("requireNonNull");
-
-        private static final Matcher<ExpressionTree> ALL_ALLOWED = Matchers.anyOf(
-                LOGSAFE_PRECONDITIONS_CHECK_NOT_NULL,
-                GUAVA_PRECONDITIONS_CHECK_NOT_NULL,
-                JAVA_UTIL_OBJECTS_REQUIRE_NON_NULL);
-    }
-
     private static final Matcher<ExpressionTree> CAFFEINE_TICKER_SYSTEM = Matchers.staticMethod()
             .onClass("com.github.benmanes.caffeine.cache.Ticker")
             .named("systemTicker")
@@ -315,120 +295,68 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         }
 
         // walk the AST again to look for usage of banned methods on that symbol
-        // we also collect up fixes to refactor cache reads to check for nullness at the same time
-        CheckCacheMethodUsageResults checkCacheMethodUsageResults = checkAndRefactorCacheMethodUsages(varSymbol, state);
-        if (checkCacheMethodUsageResults.usesBannedCacheMethods()) {
+        if (usesBannedCacheMethodsOrEscapes(varSymbol, state)) {
             return Description.NO_MATCH;
         }
 
         Optional<SuggestedFix> maybeFix = buildFix(varSymbol, tree, state);
-        SuggestedFix fixCacheReads = checkCacheMethodUsageResults
-                .fixCacheReads()
-                .orElseGet(() -> SuggestedFix.builder().build());
         return maybeFix.map(fix -> buildDescription(tree)
                         .setMessage("This Caffeine LoadingCache is a candidate for conversion to"
                                 + " com.palantir.cache.AsyncLoadingCache.")
-                        .addFix(SuggestedFix.builder()
-                                .merge(fix)
-                                .merge(fixCacheReads)
-                                .build())
+                        .addFix(fix)
                         .build())
                 .orElse(Description.NO_MATCH);
     }
 
-    private record CheckCacheMethodUsageResults(boolean usesBannedCacheMethods, Optional<SuggestedFix> fixCacheReads) {}
-
-    private CheckCacheMethodUsageResults checkAndRefactorCacheMethodUsages(VarSymbol varSymbol, VisitorState state) {
-        // this method accomplishes two things:
-        // (1) it checks for any usages of banned methods on the cache object itself
-        // (2) it potentially refactors retrieval method (e.g. a call to get()) to be wrapped in a
-        //     Preconditions.checkNotNull(), to appease NullAway
-        // we combine the two steps here because they both require another pass over the AST looking specifically at
-        // method invocations on the cache object itself, and we can easily get results for both in a single pass
-        // the TreeScanner below returns a Boolean, where true means we saw an invocation on a banned cache method;
-        // as a side-effect, if it encounters a call to get() (or one of its variants), it will append fixes to a
-        // SuggestedFix to refactor those to include a Preconditions.checkNotNull call as well
-        // we return both from this method, though in the case that we found a banned cache method call we always
-        // return an empty optional for the suggested fix
-        SuggestedFix.Builder fixBuilder = SuggestedFix.builder();
-        if (varSymbol != null) {
-            Boolean maybeResult = state.getPath()
-                    .getCompilationUnit()
-                    .accept(
-                            new TreeScanner<Boolean, Void>() {
-                                private final Set<ExpressionTree> alreadyNullChecked = new HashSet<>();
-
-                                @Override
-                                public Boolean reduce(Boolean lhs, Boolean rhs) {
-                                    // fail if any invocation is on a banned method
-                                    return Boolean.TRUE.equals(lhs) || Boolean.TRUE.equals(rhs);
-                                }
-
-                                @SuppressWarnings("CyclomaticComplexity")
-                                @Override
-                                public Boolean visitMethodInvocation(MethodInvocationTree tree, Void _unused) {
-                                    // check if the cache symbol is passed as an argument to any method call;
-                                    // if so, we can't safely refactor it because the callee expects the
-                                    // original type.
-                                    // TODO(blaub): this is conservative — we could allow cases where the
-                                    // symbol remains within the same compilation unit (e.g. private helpers)
-                                    for (ExpressionTree arg : tree.getArguments()) {
-                                        Symbol argSymbol = ASTHelpers.getSymbol(arg);
-                                        if (varSymbol.equals(argSymbol)) {
-                                            return true;
-                                        }
-                                    }
-                                    if (NullChecks.ALL_ALLOWED.matches(tree, state)
-                                            && !tree.getArguments().isEmpty()) {
-                                        alreadyNullChecked.add(
-                                                tree.getArguments().get(0));
-                                    }
-                                    ExpressionTree receiver = ASTHelpers.getReceiver(tree);
-                                    Symbol thisSymbol = ASTHelpers.getSymbol(receiver);
-                                    if (thisSymbol != null) {
-                                        // are we looking at a method invocation on the caffeine cache symbol we are
-                                        // trying to convert?
-                                        if (thisSymbol.equals(varSymbol)) {
-                                            // are we invoking a banned method?
-                                            if (!AllowedCacheMethods.ALL_ALLOWED.matches(tree, state)) {
-                                                // not allowed to convert this cache
-                                                return true;
-                                            }
-
-                                            if (!alreadyNullChecked.contains(tree)
-                                                    && (AllowedCacheMethods.GET.matches(tree, state)
-                                                            || AllowedCacheMethods.GET_IF_PRESENT.matches(tree, state)
-                                                            || AllowedCacheMethods.GET_WITH_LOADER.matches(
-                                                                    tree, state))) {
-                                                String preconditionsType = SuggestedFixes.qualifyType(
-                                                        state, fixBuilder, "com.palantir.logsafe.Preconditions");
-                                                fixBuilder
-                                                        .prefixWith(tree, preconditionsType + ".checkNotNull(")
-                                                        .postfixWith(tree, ")");
-                                            }
-                                        }
-                                    }
-                                    return super.visitMethodInvocation(tree, null);
-                                }
-
-                                @Override
-                                public Boolean visitNewClass(NewClassTree tree, Void _unused) {
-                                    for (ExpressionTree arg : tree.getArguments()) {
-                                        Symbol argSymbol = ASTHelpers.getSymbol(arg);
-                                        if (varSymbol.equals(argSymbol)) {
-                                            return true;
-                                        }
-                                    }
-                                    return super.visitNewClass(tree, null);
-                                }
-                            },
-                            null);
-            // TreeScanner may return null
-            if (Boolean.TRUE.equals(maybeResult)) {
-                return new CheckCacheMethodUsageResults(true, Optional.empty());
-            }
+    private boolean usesBannedCacheMethodsOrEscapes(VarSymbol varSymbol, VisitorState state) {
+        if (varSymbol == null) {
+            return false;
         }
-        return new CheckCacheMethodUsageResults(false, Optional.of(fixBuilder.build()));
+        Boolean maybeResult = state.getPath()
+                .getCompilationUnit()
+                .accept(
+                        new TreeScanner<Boolean, Void>() {
+                            @Override
+                            public Boolean reduce(Boolean lhs, Boolean rhs) {
+                                return Boolean.TRUE.equals(lhs) || Boolean.TRUE.equals(rhs);
+                            }
+
+                            @Override
+                            public Boolean visitMethodInvocation(MethodInvocationTree tree, Void _unused) {
+                                // check if the cache symbol is passed as an argument to any method call;
+                                // if so, we can't safely refactor it because the callee expects the
+                                // original type.
+                                // TODO(blaub): this is conservative — we could allow cases where the
+                                // symbol remains within the same compilation unit (e.g. private helpers)
+                                for (ExpressionTree arg : tree.getArguments()) {
+                                    Symbol argSymbol = ASTHelpers.getSymbol(arg);
+                                    if (varSymbol.equals(argSymbol)) {
+                                        return true;
+                                    }
+                                }
+                                ExpressionTree receiver = ASTHelpers.getReceiver(tree);
+                                Symbol thisSymbol = ASTHelpers.getSymbol(receiver);
+                                if (thisSymbol != null && thisSymbol.equals(varSymbol)) {
+                                    if (!AllowedCacheMethods.ALL_ALLOWED.matches(tree, state)) {
+                                        return true;
+                                    }
+                                }
+                                return super.visitMethodInvocation(tree, null);
+                            }
+
+                            @Override
+                            public Boolean visitNewClass(NewClassTree tree, Void _unused) {
+                                for (ExpressionTree arg : tree.getArguments()) {
+                                    Symbol argSymbol = ASTHelpers.getSymbol(arg);
+                                    if (varSymbol.equals(argSymbol)) {
+                                        return true;
+                                    }
+                                }
+                                return super.visitNewClass(tree, null);
+                            }
+                        },
+                        null);
+        return Boolean.TRUE.equals(maybeResult);
     }
 
     @SuppressWarnings({"CyclomaticComplexity", "MethodLength"})

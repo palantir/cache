@@ -169,7 +169,6 @@ final class CaffeineLoadingCacheRefactoringTest {
             import com.github.benmanes.caffeine.cache.LoadingCache;
             import com.palantir.cache.AsyncLoadingCache;
             import com.palantir.cache.Cache;
-            import com.palantir.logsafe.Preconditions;
             import java.util.concurrent.Executors;
 
             class Test {
@@ -191,7 +190,7 @@ final class CaffeineLoadingCacheRefactoringTest {
                 }
 
                 String getValue(String key) {
-                    return Preconditions.checkNotNull(cache.get(key));
+                    return cache.get(key);
                 }
             }
             """.stripIndent();
