@@ -798,8 +798,8 @@ final class CaffeineLoadingCacheRefactoringTest {
             class Test {
                 private AsyncLoadingCache<String, String> cache;
 
-                // legacyName() is used to preserve metric flows for existing caches; consider changing the cache
-                // name to one compatible with com.palantir.cache.CacheBuilder#name()
+                // legacyName() is deprecated, but used to preserve metric flows for existing caches; consider
+                // changing the cache name to one compatible with com.palantir.cache.CacheBuilder#name()
                 @SuppressWarnings("for-rollout:deprecation")
                 void setupCache(TaggedMetricRegistry metrics) {
                     this.cache =
