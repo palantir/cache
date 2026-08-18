@@ -359,7 +359,7 @@ public final class CaffeineLoadingCacheRefactoring extends BugChecker
         return Boolean.TRUE.equals(maybeResult);
     }
 
-    @SuppressWarnings({"CyclomaticComplexity", "MethodLength"})
+    @SuppressWarnings({"CyclomaticComplexity", "MethodLength", "for-rollout:ReferenceEquality"})
     private Optional<SuggestedFix> buildFix(VarSymbol varSymbol, MethodInvocationTree buildCall, VisitorState state) {
         if (varSymbol == null
                 || varSymbol.type == null
