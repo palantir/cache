@@ -36,16 +36,6 @@ public interface BulkCacheLoader<K, V extends @Nullable Object> extends CacheLoa
     }
 
     /**
-     * Returns the maximum number of keys that a compatible cache may pass to {@link #loadAll} in one call. The value is
-     * read when the cache is constructed and must be positive. The default permits effectively unbounded bulk loads.
-     *
-     * @return the positive maximum number of keys in a bulk load
-     */
-    default int maximumBatchSize() {
-        return Integer.MAX_VALUE;
-    }
-
-    /**
      * Computes or retrieves the values corresponding to {@code keys}.
      * <p>
      * If the returned map doesn't contain all requested {@code keys}, then the entries it does
@@ -60,6 +50,16 @@ public interface BulkCacheLoader<K, V extends @Nullable Object> extends CacheLoa
      *         values</b>
      */
     Map<K, V> loadAll(Set<K> keys);
+
+    /**
+     * Returns the maximum number of keys that a compatible cache may pass to {@link #loadAll} in one call. The value is
+     * read when the cache is constructed and must be positive. The default permits effectively unbounded bulk loads.
+     *
+     * @return the positive maximum number of keys in a bulk load
+     */
+    default int maximumBatchSize() {
+        return Integer.MAX_VALUE;
+    }
 
     /**
      * Returns a bulk cache loader that delegates loads and limits calls to {@link #loadAll} to at most
