@@ -48,8 +48,6 @@ import org.junit.jupiter.api.Test;
 
 final class CacheTest {
 
-    private static final int CACHE_MAXIMUM_SIZE = 10;
-
     private ExecutorService executor;
 
     @BeforeEach
@@ -462,7 +460,7 @@ final class CacheTest {
 
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> executor)
@@ -495,7 +493,7 @@ final class CacheTest {
         List<Set<String>> loadedBatches = Collections.synchronizedList(new ArrayList<>());
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> executor)
@@ -519,7 +517,7 @@ final class CacheTest {
         AtomicInteger requestCount = new AtomicInteger();
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> executor)
@@ -540,7 +538,7 @@ final class CacheTest {
     void getAll_maximumBatchSize_returnsPartialResultAndCachesExtraValue() {
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> executor)
@@ -561,7 +559,7 @@ final class CacheTest {
     void getAll_maximumBatchSize_atomic() {
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> Runnable::run)
@@ -587,7 +585,7 @@ final class CacheTest {
         AtomicInteger loadCount = new AtomicInteger();
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
-                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .maximumSize(10)
                 .noExpiry()
                 .noMetrics()
                 .executor(_name -> Runnable::run)
