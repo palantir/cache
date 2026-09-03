@@ -36,13 +36,14 @@ public interface AsyncBulkLoadingCache<K, V extends @Nullable Object> extends As
      * The returned map contains entries that were already cached, combined with the newly loaded entries; it will never
      * contain null keys or values.
      * <p>
-     * Caches loaded by a {@link CacheLoader} will issue a single request to {@link BulkCacheLoader#loadAll} for all
-     * keys which are not already present in the cache. All entries returned by {@link BulkCacheLoader#loadAll} will be
-     * stored in the cache, overwriting any previously cached values. If another call to {@link #get} tries to load the
-     * value for key in {@code keys}, implementations may either have that thread load the entry or simply wait for this
-     * thread to finish and return the loaded value. In the case of overlapping non-blocking loads, the last load to
-     * complete will replace the existing entry. Note that multiple threads can concurrently load values for distinct
-     * keys.
+     * Keys which are not already present in the cache are loaded using one or more calls to
+     * {@link BulkCacheLoader#loadAll}. Each call contains no more than {@link BulkCacheLoader#maximumBatchSize} keys.
+     * If multiple calls are required, the cache attempts to perform them concurrently using the configured executor.
+     * All entries returned by {@link BulkCacheLoader#loadAll} will be stored in the cache, overwriting any previously
+     * cached values. If another call to {@link #get} tries to load the value for key in {@code keys}, implementations
+     * may either have that thread load the entry or simply wait for this thread to finish and return the loaded value.
+     * In the case of overlapping non-blocking loads, the last load to complete will replace the existing entry. Note
+     * that multiple threads can concurrently load values for distinct keys.
      * <p>
      * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be ignored.
      *

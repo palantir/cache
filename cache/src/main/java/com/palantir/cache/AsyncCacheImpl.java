@@ -18,11 +18,17 @@ package com.palantir.cache;
 
 import static com.palantir.logsafe.Preconditions.checkState;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.math.IntMath;
 import com.google.errorprone.annotations.MustBeClosed;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.tracing.Tracers;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -106,6 +112,36 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     public Iterator<Entry<K, V>> entries() {
         return Iterators.unmodifiableIterator(
                 cache.synchronous().asMap().entrySet().iterator());
+    }
+
+    final Map<K, V> getAllInBatches(
+            Iterable<? extends K> keys,
+            Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction,
+            int maximumBatchSize) {
+        return await(cache.getAll(keys, (keysToLoad, executor) -> {
+            if (keysToLoad.size() <= maximumBatchSize) {
+                return asyncLoad(keysToLoad, mappingFunction, executor);
+            }
+
+            int batchCount = IntMath.divide(keysToLoad.size(), maximumBatchSize, RoundingMode.CEILING);
+            List<CompletableFuture<Map<? extends K, ? extends V>>> futures = new ArrayList<>(batchCount);
+            Iterables.partition(keysToLoad, maximumBatchSize)
+                    .forEach(batch -> futures.add(asyncLoad(Set.copyOf(batch), mappingFunction, executor)));
+
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                    .thenApply(_result -> {
+                        ImmutableMap.Builder<K, V> resultsBuilder = ImmutableMap.builder();
+                        futures.forEach(future -> future.join().forEach(resultsBuilder::put));
+                        return resultsBuilder.buildKeepingLast();
+                    });
+        }));
+    }
+
+    private <I, O> CompletableFuture<O> asyncLoad(
+            I input, Function<? super I, ? extends O> mappingFunction, Executor executor) {
+        try (Loader<I, O> loader = loader(mappingFunction)) {
+            return loader.apply(input, executor);
+        }
     }
 
     private static <T> T await(Future<T> future) {

@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.tracing.Observability;
 import com.palantir.tracing.Tracer;
 import com.palantir.tracing.Tracers;
@@ -29,18 +30,30 @@ import com.palantir.tracing.api.OpenSpan;
 import com.palantir.tracing.api.Span;
 import com.palantir.tracing.api.SpanType;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class CacheTest {
+
+    private static final int CACHE_MAXIMUM_SIZE = 10;
+    private static final int INVALID_MAXIMUM_BATCH_SIZE = 0;
+    private static final int LARGE_MAXIMUM_BATCH_SIZE = Integer.MAX_VALUE - 1;
+    private static final int MAXIMUM_BATCH_SIZE = 2;
+    private static final int MINIMUM_BATCH_SIZE = 1;
 
     private ExecutorService executor;
 
@@ -444,6 +457,261 @@ final class CacheTest {
                             .buildSync();
                 })
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void getAll_withBoundedBulkLoader_loadsBatchesConcurrently() throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(2);
+        CountDownLatch allowLoadsToComplete = new CountDownLatch(1);
+        Queue<Set<String>> loadedBatches = new ConcurrentLinkedQueue<>();
+        BulkCacheLoader<String, String> bulkCacheLoader = BulkCacheLoader.withMaximumBatchSize(
+                keys -> {
+                    loadedBatches.add(Set.copyOf(keys));
+                    startLatch.countDown();
+                    Uninterruptibles.awaitUninterruptibly(allowLoadsToComplete);
+                    return keys.stream().collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
+                },
+                MAXIMUM_BATCH_SIZE);
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(bulkCacheLoader);
+
+        Future<Map<String, String>> result = executor.submit(() -> cache.getAll(List.of("key1", "key2", "key3")));
+
+        try {
+            assertThat(startLatch.await(1, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            allowLoadsToComplete.countDown();
+        }
+
+        assertThat(loadedBatches).containsExactlyInAnyOrder(Set.of("key1", "key2"), Set.of("key3"));
+        assertThat(result)
+                .succeedsWithin(1, TimeUnit.SECONDS)
+                .isEqualTo(Map.of("key1", "value-key1", "key2", "value-key2", "key3", "value-key3"));
+    }
+
+    @Test
+    void getAll_withMappingFunction_usesSingleRequest() {
+        AtomicInteger requestCount = new AtomicInteger();
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(_keys -> Map.of(), MAXIMUM_BATCH_SIZE));
+
+        Map<String, String> result = cache.getAll(List.of("key1", "key2", "key3"), keys -> {
+            requestCount.incrementAndGet();
+            return keys.stream().collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
+        });
+
+        assertThat(requestCount).hasValue(1);
+        assertThat(result)
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("key1", "value-key1", "key2", "value-key2", "key3", "value-key3"));
+    }
+
+    @Test
+    void buildAsyncWithBulkLoader_withNonPositiveMaximumBatchSize_throwsIllegalArgument() {
+        BulkCacheLoader<String, String> bulkCacheLoader = new BulkCacheLoader<>() {
+            @Override
+            public int maximumBatchSize() {
+                return INVALID_MAXIMUM_BATCH_SIZE;
+            }
+
+            @Override
+            public Map<String, String> loadAll(Set<String> _keys) {
+                return Map.of();
+            }
+        };
+
+        assertThatThrownBy(() -> Cache.<String, String>builder()
+                        .name("test")
+                        .maximumSize(CACHE_MAXIMUM_SIZE)
+                        .noExpiry()
+                        .noMetrics()
+                        .executor(_name -> executor)
+                        .buildAsyncWithBulkLoader(bulkCacheLoader))
+                .isInstanceOf(SafeIllegalArgumentException.class);
+    }
+
+    @Test
+    void withMaximumBatchSize_withNonPositiveMaximumBatchSize_throwsIllegalArgument() {
+        assertThatThrownBy(() -> BulkCacheLoader.withMaximumBatchSize(_keys -> Map.of(), INVALID_MAXIMUM_BATCH_SIZE))
+                .isInstanceOf(SafeIllegalArgumentException.class);
+    }
+
+    @Test
+    void getAll_withCachedKey_batchesOnlyMissingKeys() {
+        Queue<Set<String>> loadedBatches = new ConcurrentLinkedQueue<>();
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
+                        keys -> {
+                            loadedBatches.add(Set.copyOf(keys));
+                            return keys.stream()
+                                    .collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
+                        },
+                        MAXIMUM_BATCH_SIZE));
+        cache.put("cached-key", "cached-value");
+
+        assertThat(cache.getAll(List.of("cached-key", "key1", "key2")))
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("cached-key", "cached-value", "key1", "value-key1", "key2", "value-key2"));
+        assertThat(loadedBatches).containsExactly(Set.of("key1", "key2"));
+    }
+
+    @Test
+    void getAll_withLargeFiniteMaximumBatchSize_loadsSingleBatch() {
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
+                        keys -> keys.stream().collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key)),
+                        LARGE_MAXIMUM_BATCH_SIZE));
+
+        assertThat(cache.getAll(List.of("key1"))).containsExactly(Map.entry("key1", "value-key1"));
+    }
+
+    @Test
+    void getAll_withPartialAndExtraBatchResults_returnsPartialResultAndCachesExtraValue() {
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
+                        keys -> Stream.concat(
+                                        keys.stream().filter(key -> !key.equals("key2")),
+                                        keys.contains("key1") ? Stream.of("extra-key") : Stream.empty())
+                                .collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key)),
+                        MAXIMUM_BATCH_SIZE));
+
+        assertThat(cache.getAll(List.of("key1", "key2", "key3")))
+                .containsExactlyInAnyOrderEntriesOf(Map.of("key1", "value-key1", "key3", "value-key3"));
+        assertThat(cache.getAllPresent(List.of("key1", "key2", "key3", "extra-key")))
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("key1", "value-key1", "key3", "value-key3", "extra-key", "value-extra-key"));
+    }
+
+    @Test
+    void getAll_whenOneBatchFails_doesNotCacheSuccessfulBatches() {
+        CountDownLatch successfulLoadCompleted = new CountDownLatch(1);
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
+                        keys -> {
+                            String key = keys.iterator().next();
+                            if (key.equals("key1")) {
+                                successfulLoadCompleted.countDown();
+                                return Map.of(key, "value-" + key);
+                            }
+                            Uninterruptibles.awaitUninterruptibly(successfulLoadCompleted);
+                            throw new SafeRuntimeException("Expected load failure");
+                        },
+                        MINIMUM_BATCH_SIZE));
+
+        assertThatThrownBy(() -> cache.getAll(List.of("key1", "key2"))).isInstanceOf(SafeRuntimeException.class);
+        assertThat(cache.getAllPresent(List.of("key1", "key2"))).isEmpty();
+    }
+
+    @Test
+    void getAll_whenInvalidatedDuringFirstBatch_doesNotCacheLaterBatches() throws Exception {
+        CountDownLatch firstLoadStarted = new CountDownLatch(1);
+        CountDownLatch allowFirstLoadToComplete = new CountDownLatch(1);
+        AtomicInteger loadCount = new AtomicInteger();
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> Runnable::run)
+                .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
+                        keys -> {
+                            if (loadCount.incrementAndGet() == 1) {
+                                firstLoadStarted.countDown();
+                                Uninterruptibles.awaitUninterruptibly(allowFirstLoadToComplete);
+                            }
+                            return keys.stream()
+                                    .collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
+                        },
+                        MINIMUM_BATCH_SIZE));
+        Future<Map<String, String>> result = executor.submit(() -> cache.getAll(List.of("key1", "key2")));
+
+        try {
+            assertThat(firstLoadStarted.await(1, TimeUnit.SECONDS)).isTrue();
+            cache.invalidateAll();
+        } finally {
+            allowFirstLoadToComplete.countDown();
+        }
+
+        assertThat(result)
+                .succeedsWithin(1, TimeUnit.SECONDS)
+                .isEqualTo(Map.of("key1", "value-key1", "key2", "value-key2"));
+        assertThat(cache.getAllPresent(List.of("key1", "key2"))).isEmpty();
+    }
+
+    @Test
+    void buildAsyncWithBulkLoader_withChangingMaximumBatchSize_readsMaximumBatchSizeOnce() {
+        AtomicInteger maximumBatchSizeRequestCount = new AtomicInteger();
+        Queue<Set<String>> loadedBatches = new ConcurrentLinkedQueue<>();
+        BulkCacheLoader<String, String> bulkCacheLoader = new BulkCacheLoader<>() {
+            @Override
+            public int maximumBatchSize() {
+                return maximumBatchSizeRequestCount.getAndIncrement() == 0 ? MAXIMUM_BATCH_SIZE : Integer.MAX_VALUE;
+            }
+
+            @Override
+            public Map<String, String> loadAll(Set<String> keys) {
+                loadedBatches.add(Set.copyOf(keys));
+                return keys.stream().collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
+            }
+        };
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(CACHE_MAXIMUM_SIZE)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(bulkCacheLoader);
+
+        assertThat(cache.getAll(List.of("key1", "key2", "key3")))
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("key1", "value-key1", "key2", "value-key2", "key3", "value-key3"));
+        assertThat(cache.getAll(List.of("key4", "key5", "key6")))
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("key4", "value-key4", "key5", "value-key5", "key6", "value-key6"));
+        assertThat(maximumBatchSizeRequestCount).hasValue(1);
+        assertThat(loadedBatches)
+                .containsExactlyInAnyOrder(
+                        Set.of("key1", "key2"), Set.of("key3"), Set.of("key4", "key5"), Set.of("key6"));
+    }
+
+    @Test
+    void withMaximumBatchSize_withLargerLimit_preservesDelegateLimit() {
+        BulkCacheLoader<String, String> delegate =
+                BulkCacheLoader.withMaximumBatchSize(_keys -> Map.of(), MINIMUM_BATCH_SIZE);
+
+        assertThat(BulkCacheLoader.withMaximumBatchSize(delegate, MAXIMUM_BATCH_SIZE)
+                        .maximumBatchSize())
+                .isEqualTo(MINIMUM_BATCH_SIZE);
     }
 
     private interface DefaultExpiry<K, V> extends Expiry<K, V> {

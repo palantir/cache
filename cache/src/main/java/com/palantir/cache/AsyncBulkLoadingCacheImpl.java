@@ -16,6 +16,8 @@
 
 package com.palantir.cache;
 
+import static com.palantir.logsafe.Preconditions.checkArgument;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -23,15 +25,21 @@ import java.util.function.Function;
 class AsyncBulkLoadingCacheImpl<K, V> extends AsyncLoadingCacheImpl<K, V> implements AsyncBulkLoadingCache<K, V> {
 
     private final Function<Set<? extends K>, Map<K, V>> bulkMappingFunction;
+    private final int maximumBatchSize;
 
     AsyncBulkLoadingCacheImpl(
             String name, com.github.benmanes.caffeine.cache.AsyncCache<K, V> cache, BulkCacheLoader<K, V> cacheLoader) {
         super(name, cache, cacheLoader);
         this.bulkMappingFunction = CacheLoaders.newBulkMappingFunction(cacheLoader);
+        this.maximumBatchSize = cacheLoader.maximumBatchSize();
+        checkArgument(maximumBatchSize > 0, "maximumBatchSize must be positive");
     }
 
     @Override
     public final Map<K, V> getAll(Iterable<? extends K> keys) {
-        return getAll(keys, bulkMappingFunction);
+        if (maximumBatchSize == Integer.MAX_VALUE) {
+            return getAll(keys, bulkMappingFunction);
+        }
+        return getAllInBatches(keys, bulkMappingFunction, maximumBatchSize);
     }
 }

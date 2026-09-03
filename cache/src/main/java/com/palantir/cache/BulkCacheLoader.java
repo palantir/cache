@@ -16,6 +16,9 @@
 
 package com.palantir.cache;
 
+import static com.palantir.logsafe.Preconditions.checkArgument;
+import static com.palantir.logsafe.Preconditions.checkNotNull;
+
 import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -33,6 +36,16 @@ public interface BulkCacheLoader<K, V extends @Nullable Object> extends CacheLoa
     }
 
     /**
+     * Returns the maximum number of keys that a compatible cache may pass to {@link #loadAll} in one call. The value is
+     * read when the cache is constructed and must be positive. The default permits effectively unbounded bulk loads.
+     *
+     * @return the positive maximum number of keys in a bulk load
+     */
+    default int maximumBatchSize() {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
      * Computes or retrieves the values corresponding to {@code keys}.
      * <p>
      * If the returned map doesn't contain all requested {@code keys}, then the entries it does
@@ -47,4 +60,36 @@ public interface BulkCacheLoader<K, V extends @Nullable Object> extends CacheLoa
      *         values</b>
      */
     Map<K, V> loadAll(Set<K> keys);
+
+    /**
+     * Returns a bulk cache loader that delegates loads and limits calls to {@link #loadAll} to at most
+     * {@code maximumBatchSize} keys when used with a compatible cache.
+     *
+     * @param delegate bulk cache loader to delegate to
+     * @param maximumBatchSize positive maximum number of keys in a bulk load
+     * @throws IllegalArgumentException if {@code maximumBatchSize} is not positive
+     * @throws NullPointerException if {@code delegate} is null
+     */
+    static <K, V extends @Nullable Object> BulkCacheLoader<K, V> withMaximumBatchSize(
+            BulkCacheLoader<K, V> delegate, int maximumBatchSize) {
+        checkArgument(maximumBatchSize > 0, "maximumBatchSize must be positive");
+        checkNotNull(delegate, "delegate");
+        return new BulkCacheLoader<>() {
+
+            @Override
+            public V load(K key) {
+                return delegate.load(key);
+            }
+
+            @Override
+            public Map<K, V> loadAll(Set<K> keys) {
+                return delegate.loadAll(keys);
+            }
+
+            @Override
+            public int maximumBatchSize() {
+                return Math.min(delegate.maximumBatchSize(), maximumBatchSize);
+            }
+        };
+    }
 }
