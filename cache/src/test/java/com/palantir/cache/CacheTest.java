@@ -556,7 +556,7 @@ final class CacheTest {
     }
 
     @Test
-    void getAll_maximumBatchSize_atomic() {
+    void getAll_maximumBatchSize_batchFailureDoesNotCacheResults() {
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
                 .maximumSize(10)
@@ -565,11 +565,11 @@ final class CacheTest {
                 .executor(_name -> Runnable::run)
                 .buildAsyncWithBulkLoader(BulkCacheLoader.withMaximumBatchSize(
                         keys -> {
-                            String key = keys.iterator().next();
-                            if (key.equals("key2")) {
+                            if (keys.contains("key2")) {
                                 throw new SafeRuntimeException("Expected load failure");
                             }
-                            return Map.of(key, "value-" + key);
+                            return keys.stream()
+                                    .collect(Collectors.toUnmodifiableMap(key -> key, key -> "value-" + key));
                         },
                         2));
 
