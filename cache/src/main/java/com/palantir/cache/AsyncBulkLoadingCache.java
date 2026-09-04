@@ -22,7 +22,7 @@ import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A cache that loads values asynchronousky using the provided executor and stores {@link Future} wrapped values in the
+ * A cache that loads values asynchronously using the provided executor and stores {@link Future} wrapped values in the
  * cache.The cache loads values using a default cache loader that supports bulk loads a query does not provide a
  * mapping function.
  *
