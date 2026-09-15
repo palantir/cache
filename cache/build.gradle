@@ -13,6 +13,7 @@ dependencies {
     implementation 'com.palantir.tritium:tritium-caffeine'
     implementation 'org.jspecify:jspecify'
 
+    testImplementation 'com.palantir.deadlines:deadlines'
     testImplementation 'com.palantir.tracing:tracing-api'
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.junit.jupiter:junit-jupiter'
