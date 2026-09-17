@@ -20,16 +20,23 @@ import static com.palantir.logsafe.Preconditions.checkState;
 
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.MustBeClosed;
+import com.palantir.deadlines.CloseableDeadlineSuppression;
+import com.palantir.deadlines.Deadlines;
+import com.palantir.deadlines.Deadlines.Enforcement;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.tracing.Tracers;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
@@ -110,7 +117,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
     private static <T> T await(Future<T> future) {
         try {
-            return future.get();
+            return getWithinDeadline(future);
         } catch (ExecutionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
                 runtimeException.addSuppressed(new SafeRuntimeException("Cache load failed"));
@@ -124,6 +131,25 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new SafeRuntimeException("Cache load interrupted", e);
+        }
+    }
+
+    // Waits for the load this caller is sharing, but only for as long as this caller's own deadline allows. Waiting
+    // for the full load would let a caller with a small budget be held up for as long as the largest budget among
+    // the waiters, which is the budget the load itself is allowed to take.
+    private static <T> T getWithinDeadline(Future<T> future) throws ExecutionException, InterruptedException {
+        Optional<Duration> remaining = Deadlines.getRemainingDeadline();
+        if (remaining.isEmpty()) {
+            return future.get();
+        }
+
+        try {
+            return future.get(remaining.get().toNanos(), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException e) {
+            // Throws if this caller's expired deadline is enforced. If it is not, the caller has not asked us to
+            // abandon work on its behalf, so wait for the load to finish.
+            Deadlines.checkDeadline(Enforcement.DEFER);
+            return future.get();
         }
     }
 
@@ -162,7 +188,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
                 try {
                     executor.execute(Tracers.wrap(loadOperation, () -> {
                         try {
-                            future.complete(mappingFunction.apply(key));
+                            future.complete(load(key));
                         } catch (Throwable t) {
                             future.completeExceptionally(t);
                         }
@@ -173,6 +199,15 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
             };
 
             return future;
+        }
+
+        // The load runs in the trace, and therefore under the deadline, of whichever caller happened to start it,
+        // but every caller waiting on it shares the result. Hide that deadline so the caller with the smallest
+        // remaining budget cannot fail a load the other waiters still have ample time for.
+        private O load(I key) {
+            try (CloseableDeadlineSuppression ignored = Deadlines.suppressDeadline()) {
+                return mappingFunction.apply(key);
+            }
         }
 
         @Override
