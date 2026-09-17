@@ -25,7 +25,7 @@ import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A cache that loads values asynchronousky using the provided executor and stores {@link Future} wrapped values in the
+ * A cache that loads values asynchronously using the provided executor and stores {@link Future} wrapped values in the
  * cache.
  *
  * @param <K> the type of keys maintained by this cache
