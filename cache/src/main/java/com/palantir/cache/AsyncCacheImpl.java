@@ -20,6 +20,7 @@ import static com.palantir.logsafe.Preconditions.checkState;
 
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.MustBeClosed;
+import com.palantir.deadlines.Deadlines;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.tracing.Tracers;
 import java.util.Iterator;
@@ -160,15 +161,17 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
             runnable = () -> {
                 try {
-                    executor.execute(Tracers.wrap(loadOperation, () -> {
-                        try {
-                            future.complete(mappingFunction.apply(key));
-                        } catch (Throwable t) {
-                            future.completeExceptionally(t);
-                        }
-                    }));
+                    executor.execute(Tracers.wrap(
+                            loadOperation,
+                            () -> Deadlines.withoutInheritedDeadlines(() -> {
+                                try {
+                                    future.complete(mappingFunction.apply(key));
+                                } catch (Throwable t) {
+                                    future.completeExceptionally(t);
+                                }
+                            })));
                 } catch (Throwable t) {
-                    future.obtrudeException(t);
+                    Deadlines.withoutInheritedDeadlines(() -> future.obtrudeException(t));
                 }
             };
 

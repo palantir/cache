@@ -27,6 +27,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * A cache that loads values asynchronousky using the provided executor and stores {@link Future} wrapped values in the
  * cache.
+ * <p>
+ * Cache loads ignore inherited deadlines. Client-configured timeouts still apply.
  *
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values.

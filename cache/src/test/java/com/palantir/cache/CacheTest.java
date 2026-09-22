@@ -21,7 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.palantir.deadlines.Deadlines;
+import com.palantir.deadlines.Deadlines.Enforcement;
 import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
+import com.palantir.tracing.CloseableTracer;
 import com.palantir.tracing.Observability;
 import com.palantir.tracing.Tracer;
 import com.palantir.tracing.Tracers;
@@ -30,6 +33,7 @@ import com.palantir.tracing.api.Span;
 import com.palantir.tracing.api.SpanType;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -407,6 +411,77 @@ final class CacheTest {
 
             return "value";
         });
+    }
+
+    @Test
+    void async_loads_ignore_inherited_deadlines() {
+        AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsyncWithBulkLoader(_keys -> {
+                    assertThat(Deadlines.isSuppressed()).isTrue();
+                    assertThat(Deadlines.getRemainingDeadline()).isEmpty();
+                    assertThat(Deadlines.getEnforcement()).isEmpty();
+                    return Map.of("key1", "value1", "key2", "value2");
+                });
+
+        try (CloseableTracer ignored = CloseableTracer.startSpan("test")) {
+            Deadlines.parseFromRequest(
+                    Optional.of(Duration.ZERO), Map.of(), (_request, _header) -> Optional.empty(), Enforcement.ENFORCE);
+
+            assertThat(cache.get("key1")).isEqualTo("value1");
+            assertThat(cache.getAll(Set.of("key2"))).containsExactly(Map.entry("key2", "value2"));
+
+            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
+            assertThat(Deadlines.getEnforcement()).contains(Enforcement.ENFORCE);
+        }
+    }
+
+    @Test
+    void direct_async_load_and_completion_callbacks_restore_deadlines() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .expiry(new DefaultExpiry<>() {
+                    @Override
+                    public long expireAfterCreate(String _key, String _value, long _currentTime) {
+                        Deadlines.checkDeadline(Enforcement.ENFORCE);
+                        return Long.MAX_VALUE;
+                    }
+                })
+                .noMetrics()
+                .executor(ExecutorFactory.direct())
+                .buildAsync();
+
+        try (CloseableTracer ignored = CloseableTracer.startSpan("test")) {
+            Deadlines.parseFromRequest(
+                    Optional.of(Duration.ZERO), Map.of(), (_request, _header) -> Optional.empty(), Enforcement.ENFORCE);
+
+            assertThat(cache.get("success", _key -> {
+                        assertThat(Deadlines.isSuppressed()).isTrue();
+                        return "value";
+                    }))
+                    .isEqualTo("value");
+            assertThat(cache.getIfPresent("success"))
+                    .as("completion callbacks must finish inserting the loaded value despite the expired deadline")
+                    .isEqualTo("value");
+            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
+
+            RuntimeException failure = new RuntimeException("expected");
+            assertThatThrownBy(() -> cache.get("failure", _key -> {
+                        assertThat(Deadlines.isSuppressed()).isTrue();
+                        throw failure;
+                    }))
+                    .isSameAs(failure);
+            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
+            assertThat(Deadlines.getEnforcement()).contains(Enforcement.ENFORCE);
+        }
     }
 
     @Test
