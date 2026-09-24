@@ -414,7 +414,7 @@ final class CacheTest {
     }
 
     @Test
-    void async_loads_ignore_inherited_deadlines() {
+    void async_loads_disable_deadline_enforcement() {
         AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")
                 .maximumSize(10)
@@ -422,9 +422,11 @@ final class CacheTest {
                 .noMetrics()
                 .executor(_name -> executor)
                 .buildAsyncWithBulkLoader(_keys -> {
-                    assertThat(Deadlines.isSuppressed()).isTrue();
-                    assertThat(Deadlines.getRemainingDeadline()).isEmpty();
-                    assertThat(Deadlines.getEnforcement()).isEmpty();
+                    assertThat(Deadlines.isEnforcementDisabled()).isTrue();
+                    assertThat(Deadlines.getRemainingDeadline())
+                            .as("the expired deadline stays visible to the load, it is only left unenforced")
+                            .contains(Duration.ZERO);
+                    assertThat(Deadlines.getEnforcement()).contains(Enforcement.DISABLE);
                     return Map.of("key1", "value1", "key2", "value2");
                 });
 
@@ -435,7 +437,7 @@ final class CacheTest {
             assertThat(cache.get("key1")).isEqualTo("value1");
             assertThat(cache.getAll(Set.of("key2"))).containsExactly(Map.entry("key2", "value2"));
 
-            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.isEnforcementDisabled()).isFalse();
             assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
             assertThat(Deadlines.getEnforcement()).contains(Enforcement.ENFORCE);
         }
@@ -462,23 +464,23 @@ final class CacheTest {
                     Optional.of(Duration.ZERO), Map.of(), (_request, _header) -> Optional.empty(), Enforcement.ENFORCE);
 
             assertThat(cache.get("success", _key -> {
-                        assertThat(Deadlines.isSuppressed()).isTrue();
+                        assertThat(Deadlines.isEnforcementDisabled()).isTrue();
                         return "value";
                     }))
                     .isEqualTo("value");
             assertThat(cache.getIfPresent("success"))
                     .as("completion callbacks must finish inserting the loaded value despite the expired deadline")
                     .isEqualTo("value");
-            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.isEnforcementDisabled()).isFalse();
             assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
 
             RuntimeException failure = new RuntimeException("expected");
             assertThatThrownBy(() -> cache.get("failure", _key -> {
-                        assertThat(Deadlines.isSuppressed()).isTrue();
+                        assertThat(Deadlines.isEnforcementDisabled()).isTrue();
                         throw failure;
                     }))
                     .isSameAs(failure);
-            assertThat(Deadlines.isSuppressed()).isFalse();
+            assertThat(Deadlines.isEnforcementDisabled()).isFalse();
             assertThat(Deadlines.getRemainingDeadline()).contains(Duration.ZERO);
             assertThat(Deadlines.getEnforcement()).contains(Enforcement.ENFORCE);
         }

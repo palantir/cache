@@ -163,7 +163,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
                 try {
                     executor.execute(Tracers.wrap(
                             loadOperation,
-                            () -> Deadlines.withoutInheritedDeadlines(() -> {
+                            () -> Deadlines.withEnforcementDisabled(() -> {
                                 try {
                                     future.complete(mappingFunction.apply(key));
                                 } catch (Throwable t) {
@@ -171,7 +171,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
                                 }
                             })));
                 } catch (Throwable t) {
-                    Deadlines.withoutInheritedDeadlines(() -> future.obtrudeException(t));
+                    Deadlines.withEnforcementDisabled(() -> future.obtrudeException(t));
                 }
             };
 
