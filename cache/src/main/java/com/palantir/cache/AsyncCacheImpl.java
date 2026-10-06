@@ -20,6 +20,9 @@ import static com.palantir.logsafe.Preconditions.checkState;
 
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.MustBeClosed;
+import com.palantir.deadlines.DeadlineScope;
+import com.palantir.deadlines.Deadlines;
+import com.palantir.deadlines.Deadlines.Enforcement;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
 import com.palantir.tracing.Tracers;
 import java.util.Iterator;
@@ -53,7 +56,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     @Override
     public final V get(K key, Function<? super K, ? extends V> mappingFunction) {
         CompletableFuture<V> future;
-        try (Loader<K, V> loader = loader(mappingFunction)) {
+        try (Loader<K, V> loader = loader(mappingFunction, true)) {
             future = cache.get(key, loader);
         }
 
@@ -70,7 +73,10 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
             Iterable<? extends K> keys,
             Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
         CompletableFuture<Map<K, V>> future;
-        try (Loader<Set<? extends K>, Map<? extends K, ? extends V>> loader = loader(mappingFunction)) {
+        // Unlike get, a caller whose deadline has expired still starts a bulk load. Caffeine inserts placeholder
+        // entries for the missing keys before it calls the loader, so failing the load would fail other callers
+        // waiting on those keys. The caller still does not wait for the load, see await.
+        try (Loader<Set<? extends K>, Map<? extends K, ? extends V>> loader = loader(mappingFunction, false)) {
             future = cache.getAll(keys, loader);
         }
 
@@ -108,9 +114,11 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
                 cache.synchronous().asMap().entrySet().iterator());
     }
 
+    // The load is shared with every other caller waiting for the same keys, so each caller stops waiting at its own
+    // enforced deadline without cancelling the load.
     private static <T> T await(Future<T> future) {
         try {
-            return future.get();
+            return Deadlines.awaitWithinDeadline(future, Enforcement.DEFER);
         } catch (ExecutionException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
                 runtimeException.addSuppressed(new SafeRuntimeException("Cache load failed"));
@@ -128,8 +136,8 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     }
 
     @MustBeClosed
-    private <I, O> Loader<I, O> loader(Function<? super I, ? extends O> mappingFunction) {
-        return new Loader<>(loadOperation, mappingFunction);
+    private <I, O> Loader<I, O> loader(Function<? super I, ? extends O> mappingFunction, boolean checkDeadline) {
+        return new Loader<>(loadOperation, mappingFunction, checkDeadline);
     }
 
     // This class exists to ensure that we do not start loading values until the entry is inserted into the cache.
@@ -142,31 +150,41 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
         private final String loadOperation;
         private final Function<? super I, ? extends O> mappingFunction;
+        private final boolean checkDeadline;
 
         @Nullable
         private Runnable runnable;
 
         @MustBeClosed
-        Loader(String loadOperation, Function<? super I, ? extends O> mappingFunction) {
+        Loader(String loadOperation, Function<? super I, ? extends O> mappingFunction, boolean checkDeadline) {
             this.loadOperation = loadOperation;
             this.mappingFunction = mappingFunction;
+            this.checkDeadline = checkDeadline;
         }
 
         @Override
         public CompletableFuture<O> apply(I key, Executor executor) {
             checkState(runnable == null);
 
+            if (checkDeadline) {
+                // A caller whose deadline has expired does not start a load. Caffeine calls this only on a miss, before
+                // inserting an entry, so throwing leaves the cache unchanged and fails only this caller.
+                Deadlines.checkDeadline(Enforcement.DEFER);
+            }
+
             CompletableFuture<O> future = new CompletableFuture<>();
 
             runnable = () -> {
                 try {
-                    executor.execute(Tracers.wrap(loadOperation, () -> {
-                        try {
-                            future.complete(mappingFunction.apply(key));
-                        } catch (Throwable t) {
-                            future.completeExceptionally(t);
-                        }
-                    }));
+                    executor.execute(Tracers.wrap(
+                            loadOperation,
+                            () -> runWithoutDeadline(() -> {
+                                try {
+                                    future.complete(mappingFunction.apply(key));
+                                } catch (Throwable t) {
+                                    future.completeExceptionally(t);
+                                }
+                            })));
                 } catch (Throwable t) {
                     future.obtrudeException(t);
                 }
@@ -179,6 +197,15 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
         public void close() {
             if (runnable != null) {
                 runnable.run();
+            }
+        }
+
+        // The load, and any completion callbacks that run when it completes the future, run without a deadline. The
+        // load is shared with every caller waiting for the same keys, so it must not be bounded by the deadline of the
+        // caller that happened to start it.
+        private static void runWithoutDeadline(Runnable task) {
+            try (DeadlineScope ignored = Deadlines.withoutDeadline()) {
+                task.run();
             }
         }
     }

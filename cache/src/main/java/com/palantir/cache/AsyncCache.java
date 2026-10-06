@@ -27,6 +27,13 @@ import org.jspecify.annotations.Nullable;
 /**
  * A cache that loads values asynchronousky using the provided executor and stores {@link Future} wrapped values in the
  * cache.
+ * <p>
+ * A load is shared by every caller waiting for the same keys, so it runs without a deadline: the deadline of the caller
+ * that starts it does not apply to the load, nor to work the load hands off with {@code Deadlines.wrap}. Requests the
+ * load makes carry only their client's own deadline. Each caller waits for a load no longer than its own enforced
+ * deadline allows, then throws {@code DeadlineExpiredException} without cancelling the load. A caller whose enforced
+ * deadline has already expired gets values that are already loaded and otherwise throws immediately. {@link #get} does
+ * not start a load for such a caller; {@link #getAll} may, and that load completes for other callers.
  *
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values.

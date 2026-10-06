@@ -47,6 +47,8 @@ allprojects {
 
     repositories {
         mavenCentral() { metadataSources { mavenPom(); ignoreGradleMetadataRedirection() } }
+        // TODO: remove. Resolves the locally published deadlines-java (version 999).
+        mavenLocal()
     }
 
     tasks.withType(JavaCompile) {
