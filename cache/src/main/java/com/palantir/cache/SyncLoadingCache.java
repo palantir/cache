@@ -16,7 +16,6 @@
 
 package com.palantir.cache;
 
-import java.util.concurrent.CompletionException;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -44,8 +43,7 @@ public interface SyncLoadingCache<K, V extends @Nullable Object> extends SyncCac
      * If the specified key is not already associated with a value, attempts to compute its value and enters it into
      * this cache unless {@code null}. The entire method invocation is performed atomically, so the function is applied
      * at most once per key. Some attempted update operations on this cache by other threads may be blocked while the
-     * computation is in progress, so the computation should be short and simple, and must not attempt to update any
-     * other mappings of this cache.
+     * computation is in progress, so the computation should be short and simple.
      *
      * @param key the key with which the specified value is to be associated
      * @return the current (existing or computed) value associated with the specified key, or null if the computed value
@@ -53,7 +51,6 @@ public interface SyncLoadingCache<K, V extends @Nullable Object> extends SyncCac
      * @throws NullPointerException if the specified key is null
      * @throws IllegalStateException if the computation detectably attempts a recursive update to this cache that would
      *         otherwise never complete
-     * @throws CompletionException if a checked exception was thrown while loading the value
      * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping is left
      *         unestablished
      */
