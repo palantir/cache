@@ -18,6 +18,7 @@ package com.palantir.cache;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 class AsyncBulkLoadingCacheImpl<K, V> extends AsyncLoadingCacheImpl<K, V> implements AsyncBulkLoadingCache<K, V> {
@@ -33,5 +34,10 @@ class AsyncBulkLoadingCacheImpl<K, V> extends AsyncLoadingCacheImpl<K, V> implem
     @Override
     public final Map<K, V> getAll(Iterable<? extends K> keys) {
         return getAll(keys, bulkMappingFunction);
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> getAllAsync(Iterable<? extends K> keys) {
+        return getAllAsync(keys, bulkMappingFunction);
     }
 }

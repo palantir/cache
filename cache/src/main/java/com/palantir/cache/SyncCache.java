@@ -55,11 +55,10 @@ public interface SyncCache<K, V extends @Nullable Object> {
      * If the specified key is not already associated with a value, attempts to compute its value using the given
      * mapping function and enters it into this cache unless {@code null}. The entire method invocation is performed
      * atomically, so the function is applied at most once per key. Some attempted update operations on this cache by
-     * other threads may be blocked while the computation is in progress, so the computation should be short and simple,
-     * and must not attempt to update any other mappings of this cache.
+     * other threads may be blocked while the computation is in progress, so the computation should be short and simple.
      * <p>
-     * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-     * attempt to update any other mappings of this cache.
+     * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b> attempt to update any
+     * other mappings of this cache.
      *
      * @param key the key with which the specified value is to be associated
      * @param mappingFunction the function to compute a value
