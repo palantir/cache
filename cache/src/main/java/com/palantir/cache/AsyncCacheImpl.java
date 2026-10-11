@@ -52,12 +52,14 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
     @Override
     public final V get(K key, Function<? super K, ? extends V> mappingFunction) {
-        CompletableFuture<V> future;
-        try (Loader<K, V> loader = loader(mappingFunction)) {
-            future = cache.get(key, loader);
-        }
+        return await(getAsync(key, mappingFunction));
+    }
 
-        return await(future);
+    @Override
+    public CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction) {
+        try (Loader<K, V> loader = loader(mappingFunction)) {
+            return cache.get(key, loader);
+        }
     }
 
     @Override
@@ -69,12 +71,16 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     public final Map<K, V> getAll(
             Iterable<? extends K> keys,
             Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
-        CompletableFuture<Map<K, V>> future;
-        try (Loader<Set<? extends K>, Map<? extends K, ? extends V>> loader = loader(mappingFunction)) {
-            future = cache.getAll(keys, loader);
-        }
+        return await(getAllAsync(keys, mappingFunction));
+    }
 
-        return await(future);
+    @Override
+    public CompletableFuture<Map<K, V>> getAllAsync(
+            Iterable<? extends K> keys,
+            Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
+        try (Loader<Set<? extends K>, Map<? extends K, ? extends V>> loader = loader(mappingFunction)) {
+            return cache.getAll(keys, loader);
+        }
     }
 
     @Override
@@ -112,14 +118,15 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
         try {
             return future.get();
         } catch (ExecutionException e) {
-            if (e.getCause() instanceof RuntimeException runtimeException) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException runtimeException) {
                 runtimeException.addSuppressed(new SafeRuntimeException("Cache load failed"));
                 throw runtimeException;
-            } else if (e.getCause() instanceof Error error) {
+            } else if (cause instanceof Error error) {
                 error.addSuppressed(new SafeRuntimeException("Cache load failed"));
                 throw error;
             } else {
-                throw new SafeRuntimeException("Cache load failed", e.getCause());
+                throw new SafeRuntimeException("Cache load failed", cause);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
