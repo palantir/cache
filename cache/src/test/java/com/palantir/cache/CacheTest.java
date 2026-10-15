@@ -22,14 +22,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.palantir.deadlines.DeadlineContext;
 import com.palantir.deadlines.DeadlineExpiredException;
-import com.palantir.deadlines.DeadlineScope;
-import com.palantir.deadlines.Deadlines;
 import com.palantir.deadlines.Deadlines.Enforcement;
 import com.palantir.deadlines.DeadlinesHttpHeaders;
 import com.palantir.logsafe.exceptions.SafeIllegalArgumentException;
 import com.palantir.logsafe.exceptions.SafeIllegalStateException;
+import com.palantir.requestcontext.Deadlines;
+import com.palantir.requestcontext.RequestContext;
+import com.palantir.requestcontext.RequestContextScope;
 import com.palantir.tracing.CloseableTracer;
 import com.palantir.tracing.Observability;
 import com.palantir.tracing.Tracer;
@@ -467,7 +467,7 @@ final class CacheTest {
         @Test
         void a_load_runs_without_the_deadline_of_the_caller_that_started_it() {
             // An executor that carries the submitting thread's deadline, as Witchcraft executors can.
-            ExecutorService propagatingExecutor = Deadlines.wrap(executor);
+            ExecutorService propagatingExecutor = RequestContext.propagating(executor);
             AtomicReference<Optional<Duration>> loadSees = new AtomicReference<>();
             AtomicReference<Optional<Duration>> handOffSees = new AtomicReference<>();
             AsyncLoadingCache<String, String> cache = Cache.<String, String>builder()
@@ -483,7 +483,7 @@ final class CacheTest {
                         return "value";
                     });
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ofSeconds(10), Enforcement.ENFORCE).attach()) {
                 assertThat(cache.get("key")).isEqualTo("value");
                 assertThat(Deadlines.getRemainingDeadline())
@@ -496,8 +496,8 @@ final class CacheTest {
                     .isEmpty();
         }
 
+        // Until Witchcraft binds a request context, a request's deadline is stored on its trace by deadlines-java.
         @Test
-        @SuppressWarnings("deprecation") // Witchcraft versions without DeadlineContext store deadlines on the trace
         void a_load_runs_without_a_deadline_stored_on_the_callers_trace() {
             AtomicReference<Optional<Duration>> loadSees = new AtomicReference<>();
             AsyncLoadingCache<String, String> cache = Cache.<String, String>builder()
@@ -512,7 +512,7 @@ final class CacheTest {
                     });
 
             try (CloseableTracer ignored = CloseableTracer.startSpan("test")) {
-                Deadlines.parseFromRequest(
+                com.palantir.deadlines.Deadlines.parseFromRequest(
                         Optional.of(Duration.ofSeconds(10)),
                         Map.<String, String>of(),
                         (request, header) -> Optional.ofNullable(request.get(header)),
@@ -530,7 +530,7 @@ final class CacheTest {
 
         @Test
         void a_bulk_load_runs_without_the_deadline_of_the_caller_that_started_it() {
-            ExecutorService propagatingExecutor = Deadlines.wrap(executor);
+            ExecutorService propagatingExecutor = RequestContext.propagating(executor);
             AtomicReference<Optional<Duration>> loadSees = new AtomicReference<>();
             AsyncBulkLoadingCache<String, String> cache = Cache.<String, String>builder()
                     .name("test")
@@ -543,7 +543,7 @@ final class CacheTest {
                         return Map.of("key", "value");
                     });
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ofSeconds(10), Enforcement.ENFORCE).attach()) {
                 assertThat(cache.getAll(Set.of("key"))).containsExactly(Map.entry("key", "value"));
             }
@@ -559,7 +559,7 @@ final class CacheTest {
                     .maximumSize(10)
                     .noExpiry()
                     .noMetrics()
-                    .executor(_name -> Deadlines.wrap(executor))
+                    .executor(_name -> RequestContext.propagating(executor))
                     .buildAsyncWithLoader(_key -> {
                         loads.incrementAndGet();
                         Uninterruptibles.awaitUninterruptibly(releaseLoad);
@@ -568,7 +568,7 @@ final class CacheTest {
                         return "value";
                     });
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ofMillis(50), Enforcement.ENFORCE).attach()) {
                 assertThatThrownBy(() -> cache.get("key"))
                         .as("the caller that started the load stops waiting at its own deadline")
@@ -576,7 +576,7 @@ final class CacheTest {
             }
 
             Future<String> otherCaller = executor.submit(() -> {
-                try (DeadlineScope ignored =
+                try (RequestContextScope ignored =
                         deadline(Duration.ofSeconds(10), Enforcement.ENFORCE).attach()) {
                     return cache.get("key");
                 }
@@ -602,7 +602,7 @@ final class CacheTest {
                         return "value";
                     });
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ZERO, Enforcement.ENFORCE).attach()) {
                 assertThatThrownBy(() -> cache.get("key")).isInstanceOf(DeadlineExpiredException.External.class);
             }
@@ -623,7 +623,7 @@ final class CacheTest {
                     });
             cache.put("key", "value");
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ZERO, Enforcement.ENFORCE).attach()) {
                 assertThat(cache.get("key")).isEqualTo("value");
                 assertThat(cache.getAll(Set.of("key"))).containsExactly(Map.entry("key", "value"));
@@ -646,7 +646,7 @@ final class CacheTest {
                         return Map.of("key", "value");
                     });
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ZERO, Enforcement.ENFORCE).attach()) {
                 assertThatThrownBy(() -> cache.getAll(Set.of("key")))
                         .isInstanceOf(DeadlineExpiredException.External.class);
@@ -672,7 +672,7 @@ final class CacheTest {
                     .executor(_name -> executor)
                     .buildAsyncWithLoader(_key -> "value");
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ZERO, Enforcement.DEFER).attach()) {
                 assertThat(cache.get("key")).isEqualTo("value");
             }
@@ -696,7 +696,7 @@ final class CacheTest {
                     .executor(ExecutorFactory.direct())
                     .buildAsync();
 
-            try (DeadlineScope ignored =
+            try (RequestContextScope ignored =
                     deadline(Duration.ofSeconds(10), Enforcement.ENFORCE).attach()) {
                 assertThat(cache.get("key", _key -> {
                             loadSees.set(Deadlines.getRemainingDeadline());
@@ -711,8 +711,9 @@ final class CacheTest {
             assertThat(expirySees.get()).isEmpty();
         }
 
-        private DeadlineContext deadline(Duration remaining, Enforcement enforcement) {
-            return DeadlineContext.fromRequest(
+        private RequestContext deadline(Duration remaining, Enforcement enforcement) {
+            return Deadlines.withRequestDeadline(
+                    RequestContext.empty(),
                     Optional.empty(),
                     Map.of(DeadlinesHttpHeaders.EXPECT_WITHIN, String.valueOf(remaining.toMillis() / 1000.0)),
                     (request, header) -> Optional.ofNullable(request.get(header)),

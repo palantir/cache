@@ -1,5 +1,7 @@
 # Run ./gradlew writeVersionsLocks to regenerate this file. Blank lines are to minimize merge conflicts.
 
+com.fasterxml.jackson.core:jackson-annotations:2.22 (1 constraints: 330f5169)
+
 com.github.ben-manes.caffeine:caffeine:3.3.0 (3 constraints: 31282b45)
 
 com.github.kevinstern:software-and-algorithms:1.0 (1 constraints: 7e12fcf5)
@@ -12,35 +14,39 @@ com.google.auto.service:auto-service-annotations:1.1.1 (1 constraints: 9c0f6a86)
 
 com.google.auto.value:auto-value-annotations:1.11.0 (3 constraints: 562f3924)
 
-com.google.code.findbugs:jsr305:3.0.2 (2 constraints: c2277fc8)
+com.google.code.findbugs:jsr305:3.0.2 (3 constraints: d33c6245)
 
 com.google.errorprone:error_prone_annotation:2.50.0 (3 constraints: db2ccc46)
 
-com.google.errorprone:error_prone_annotations:2.50.0 (16 constraints: f3eb2f2d)
+com.google.errorprone:error_prone_annotations:2.50.0 (18 constraints: da108d16)
 
 com.google.errorprone:error_prone_check_api:2.50.0 (2 constraints: ca195ed6)
 
 com.google.guava:failureaccess:1.0.3 (1 constraints: 160ae3b4)
 
-com.google.guava:guava:33.7.2-jre (13 constraints: a6d1d059)
+com.google.guava:guava:33.7.2-jre (14 constraints: 5fe8af96)
 
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 constraints: bd17c918)
 
 com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
-com.palantir.deadlines:deadlines:999 (1 constraints: c104512c)
+com.palantir.deadlines:deadlines:0.28.0 (2 constraints: 821a3021)
 
 com.palantir.nylon:nylon-threads:0.16.0 (1 constraints: 3f103ea2)
 
-com.palantir.safe-logging:logger:3.20.0 (6 constraints: 3e59c6a4)
+com.palantir.request-context:request-context-java:999 (1 constraints: c104512c)
+
+com.palantir.ri:resource-identifier:2.25.0 (1 constraints: 46153db1)
+
+com.palantir.safe-logging:logger:3.20.0 (7 constraints: 876eaf74)
 
 com.palantir.safe-logging:logger-slf4j:3.20.0 (1 constraints: 300e8b50)
 
 com.palantir.safe-logging:logger-spi:3.20.0 (2 constraints: 6f1e0cb0)
 
-com.palantir.safe-logging:preconditions:3.20.0 (8 constraints: 326f362f)
+com.palantir.safe-logging:preconditions:3.20.0 (10 constraints: 0a9427cb)
 
-com.palantir.safe-logging:safe-logging:3.20.0 (11 constraints: 399ee7f6)
+com.palantir.safe-logging:safe-logging:3.20.0 (13 constraints: 11c3ab4b)
 
 com.palantir.tracing:tracing:6.41.0 (2 constraints: 9113776a)
 
@@ -52,11 +58,11 @@ com.palantir.tritium:tritium-caffeine:0.139.0 (1 constraints: 6f05af40)
 
 com.palantir.tritium:tritium-core:0.139.0 (1 constraints: 7510beb2)
 
-com.palantir.tritium:tritium-metrics:0.139.0 (2 constraints: 341fd3dd)
+com.palantir.tritium:tritium-metrics:0.139.0 (2 constraints: 331fa0dd)
 
-com.palantir.tritium:tritium-registry:0.139.0 (4 constraints: 16357f79)
+com.palantir.tritium:tritium-registry:0.139.0 (5 constraints: 8e4a34e5)
 
-io.dropwizard.metrics:metrics-core:4.2.40 (4 constraints: d33f4c2d)
+io.dropwizard.metrics:metrics-core:4.2.40 (5 constraints: 1955d6ce)
 
 io.github.eisop:dataflow-errorprone:3.41.0-eisop1 (2 constraints: 9c2c4f1c)
 
@@ -90,7 +96,7 @@ org.jboss.threads:jboss-threads:3.10.1 (1 constraints: 750e8457)
 
 org.jetbrains:annotations:26.1.0 (1 constraints: 351170d1)
 
-org.jspecify:jspecify:1.0.1 (17 constraints: d411f8fa)
+org.jspecify:jspecify:1.0.1 (19 constraints: 3d361f45)
 
 org.mpierce.metrics.reservoir:hdrhistogram-metrics-reservoir:1.1.3 (1 constraints: 0d10f991)
 

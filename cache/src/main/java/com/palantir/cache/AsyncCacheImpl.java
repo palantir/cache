@@ -20,10 +20,10 @@ import static com.palantir.logsafe.Preconditions.checkState;
 
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.MustBeClosed;
-import com.palantir.deadlines.DeadlineScope;
-import com.palantir.deadlines.Deadlines;
 import com.palantir.deadlines.Deadlines.Enforcement;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import com.palantir.requestcontext.Deadlines;
+import com.palantir.requestcontext.RequestContextScope;
 import com.palantir.tracing.Tracers;
 import java.util.Iterator;
 import java.util.Map;
@@ -204,7 +204,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
         // load is shared with every caller waiting for the same keys, so it must not be bounded by the deadline of the
         // caller that happened to start it.
         private static void runWithoutDeadline(Runnable task) {
-            try (DeadlineScope ignored = Deadlines.withoutDeadline()) {
+            try (RequestContextScope ignored = Deadlines.withoutDeadline()) {
                 task.run();
             }
         }
