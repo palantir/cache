@@ -16,7 +16,7 @@
 
 package com.palantir.cache;
 
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 
@@ -31,7 +31,7 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
 
     /**
      * Returns the value associated with the {@code key} in this cache, obtaining that value from
-     * {@link CacheLoader#load(Object)} if necessary.
+     * {@link CacheLoader#load} if necessary.
      * <p>
      * If another call to {@link #get} is currently loading the value for the {@code key}, this thread simply waits for
      * that thread to finish and returns its loaded value. Note that multiple threads can concurrently load values for
@@ -39,9 +39,7 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
      * <p>
      * If the specified key is not already associated with a value, attempts to compute its value and enters it into
      * this cache unless {@code null}. The entire method invocation is performed atomically, so the function is applied
-     * at most once per key. Some attempted update operations on this cache by other threads may be blocked while the
-     * computation is in progress, so the computation should be short and simple, and must not attempt to update any
-     * other mappings of this cache.
+     * at most once per key.
      *
      * @param key the key with which the specified value is to be associated
      * @return the current (existing or computed) value associated with the specified key, or null if the computed value
@@ -49,9 +47,25 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
      * @throws NullPointerException if the specified key is null
      * @throws IllegalStateException if the computation detectably attempts a recursive update to this cache that would
      *         otherwise never complete
-     * @throws CompletionException if a checked exception was thrown while loading the value
      * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping is left
      *         unestablished
      */
     V get(K key);
+
+    /**
+     * Returns the future associated with the {@code key} in this cache, obtaining that value from
+     * {@link CacheLoader#load} if necessary. If the asynchronous computation fails, the
+     * entry will be automatically removed from this cache.
+     * <p>
+     * If the specified key is not already associated with a value, attempts to compute its value asynchronously and
+     * enters it into this cache unless {@code null}. The entire method invocation is performed atomically, so the
+     * function is applied at most once per key.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @return the current (existing or computed) future value associated with the specified key
+     * @throws NullPointerException if the specified key is null
+     * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping is left
+     *         unestablished
+     */
+    CompletableFuture<V> getAsync(K key);
 }

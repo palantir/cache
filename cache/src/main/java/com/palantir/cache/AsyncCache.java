@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
@@ -52,12 +53,10 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * <p>
      * If the specified key is not already associated with a value, attempts to compute its value using the given
      * mapping function and enters it into this cache unless {@code null}. The entire method invocation is performed
-     * atomically, so the function is applied at most once per key. Some attempted update operations on this cache by
-     * other threads may be blocked while the computation is in progress, so the computation should be short and simple,
-     * and must not attempt to update any other mappings of this cache.
+     * atomically, so the function is applied at most once per key.
      * <p>
-     * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-     * attempt to update any other mappings of this cache.
+     * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b> attempt to update any
+     * other mappings of this cache.
      *
      * @param key the key with which the specified value is to be associated
      * @param mappingFunction the function to compute a value
@@ -69,6 +68,27 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is left unestablished
      */
     V get(K key, Function<? super K, ? extends V> mappingFunction);
+
+    /**
+     * Returns the future associated with the {@code key} in this cache, obtaining that value from the
+     * {@code mappingFunction} if necessary. This method provides a simple substitute for the conventional "if cached,
+     * return; otherwise create, cache, and return" pattern.
+     * <p>
+     * If the specified key is not already associated with a value, attempts to compute its value asynchronously using
+     * the given mapping function and enters it into this cache unless {@code null}. The entire method invocation is
+     * performed atomically, so the function is applied at most once per key.
+     * <p>
+     * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b> attempt to update any
+     * other mappings of this cache.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @param mappingFunction the function to asynchronously compute a value, optionally using the given executor
+     * @return the current (existing or computed) future value associated with the specified key
+     * @throws NullPointerException if the specified key or mappingFunction is null, or if the future returned by the
+     *         mappingFunction is null
+     * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is left unestablished
+     */
+    CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction);
 
     /**
      * Returns a map of the values associated with the {@code keys} in this cache. The returned map will only contain
@@ -105,6 +125,35 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is left unestablished
      */
     Map<K, V> getAll(
+            Iterable<? extends K> keys,
+            Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
+
+    /**
+     * Returns the future of a map of the values associated with the {@code keys}, creating or
+     * retrieving those values if necessary. The returned map contains entries that were already
+     * cached, combined with newly loaded entries; it will never contain null keys or values. If any
+     * of the asynchronous computations fail, those entries will be automatically removed from this
+     * cache.
+     * <p>
+     * A single request to the {@code mappingFunction} is performed for all keys which are not already
+     * present in the cache. If another call to {@link #get} tries to load the value for a key in
+     * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Any
+     * loaded values for keys that were not specifically requested will not be returned, but will be
+     * stored in the cache. Note that multiple threads can concurrently load values for distinct keys.
+     * <p>
+     * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
+     * ignored.
+     *
+     * @param keys the keys whose associated values are to be returned
+     * @param mappingFunction the function to asynchronously compute the values
+     * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
+     *     this cache
+     * @throws NullPointerException if the specified collection is null or contains a null element, or
+     *     if the future returned by the mappingFunction is null
+     * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
+     *     left unestablished
+     */
+    CompletableFuture<Map<K, V>> getAllAsync(
             Iterable<? extends K> keys,
             Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
 
