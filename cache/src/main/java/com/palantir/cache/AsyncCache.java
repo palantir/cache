@@ -121,6 +121,8 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      */
     void put(K key, V value);
 
+    V put(K key, Function<? super K, ? extends V> mappingFunction);
+
     /**
      * Copies all of the mappings from the specified map to the cache. The effect of this call is equivalent to that of
      * calling {@code put(k, v)} on this map once for each mapping from key

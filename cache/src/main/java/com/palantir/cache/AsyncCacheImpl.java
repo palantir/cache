@@ -57,6 +57,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
             future = cache.get(key, loader);
         }
 
+        // Can also imagine async version of this that is non-blocking and returns the future directly
         return await(future);
     }
 
@@ -80,6 +81,17 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     @Override
     public final void put(K key, V value) {
         cache.synchronous().put(key, value);
+    }
+
+    @Override
+    public V put(K key, Function<? super K, ? extends V> mappingFunction) {
+        CompletableFuture<V> future;
+        try (Loader<K, V> loader = loader(mappingFunction)) {
+            future = loader.apply(key);
+            cache.put(key, future);
+        }
+
+        return await(future);
     }
 
     @Override
