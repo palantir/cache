@@ -5,6 +5,26 @@ acceptedBreaks:
       old: "enum com.palantir.cache.DirectExecutorFactory"
       new: "enum com.palantir.cache.DirectExecutorFactory"
       justification: "DirectExecutorFactory should never have been public"
+  "0.17.0":
+    com.palantir.cache:cache:
+    - code: "java.method.addedToInterface"
+      new: "method java.util.concurrent.CompletableFuture<V> com.palantir.cache.AsyncCache<K,\
+        \ V>::getAsync(K, java.util.function.Function<? super K, ? extends V>)"
+      justification: "Cache interfaces should not have external implementations"
+    - code: "java.method.addedToInterface"
+      new: "method java.util.concurrent.CompletableFuture<V> com.palantir.cache.AsyncLoadingCache<K,\
+        \ V>::getAsync(K)"
+      justification: "Cache interfaces should not have external implementations"
+    - code: "java.method.addedToInterface"
+      new: "method java.util.concurrent.CompletableFuture<java.util.Map<K, V>> com.palantir.cache.AsyncBulkLoadingCache<K,\
+        \ V>::getAllAsync(java.lang.Iterable<? extends K>)"
+      justification: "Cache interfaces should not have external implementations"
+    - code: "java.method.addedToInterface"
+      new: "method java.util.concurrent.CompletableFuture<java.util.Map<K, V>> com.palantir.cache.AsyncCache<K,\
+        \ V>::getAllAsync(java.lang.Iterable<? extends K>, java.util.function.Function<?\
+        \ super java.util.Set<? extends K>, ? extends java.util.Map<? extends K, ?\
+        \ extends V>>)"
+      justification: "Cache interfaces should not have external implementations"
   "0.3.0":
     com.palantir.cache:cache:
     - code: "java.method.addedToInterface"

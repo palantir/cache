@@ -16,6 +16,7 @@
 
 package com.palantir.cache;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 class AsyncLoadingCacheImpl<K, V> extends AsyncCacheImpl<K, V> implements AsyncLoadingCache<K, V> {
@@ -31,5 +32,10 @@ class AsyncLoadingCacheImpl<K, V> extends AsyncCacheImpl<K, V> implements AsyncL
     @Override
     public final V get(K key) {
         return get(key, mappingFunction);
+    }
+
+    @Override
+    public CompletableFuture<V> getAsync(K key) {
+        return getAsync(key, mappingFunction);
     }
 }
