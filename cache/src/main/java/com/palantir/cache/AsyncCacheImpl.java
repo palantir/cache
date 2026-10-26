@@ -52,13 +52,17 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
     @Override
     public final V get(K key, Function<? super K, ? extends V> mappingFunction) {
-        return await(getAsync(key, mappingFunction));
+        return await(getAsyncInternal(key, mappingFunction));
     }
 
     @Override
     public CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction) {
+        return getAsyncInternal(key, mappingFunction).copy();
+    }
+
+    private CompletableFuture<V> getAsyncInternal(K key, Function<? super K, ? extends V> mappingFunction) {
         try (Loader<K, V> loader = loader(mappingFunction)) {
-            return cache.get(key, loader);
+            return cache.get(key, loader).copy();
         }
     }
 

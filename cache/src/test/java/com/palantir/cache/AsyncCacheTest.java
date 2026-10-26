@@ -29,6 +29,7 @@ import com.palantir.tracing.api.SpanType;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -74,9 +75,6 @@ final class AsyncCacheTest {
             await(finishLatch);
             return "valueA1";
         });
-
-        assertThat(cache.getIfPresent("keyA")).isNull();
-        assertThat(cache.entries()).toIterable().isEmpty();
 
         await(startLatch);
 
@@ -159,7 +157,7 @@ final class AsyncCacheTest {
             return fail();
         });
 
-        assertThat(future1).isSameAs(future2);
+        assertThat(future1).isNotSameAs(future2);
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
@@ -167,6 +165,7 @@ final class AsyncCacheTest {
         finishLatch.countDown();
 
         assertSucceeds(future1).isEqualTo("valueA1");
+        assertSucceeds(future2).isEqualTo("valueA1");
 
         assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
         assertThat(cache.entries()).toIterable().containsExactlyInAnyOrder(Map.entry("keyA", "valueA1"));
@@ -182,13 +181,28 @@ final class AsyncCacheTest {
                 .executor(_name -> executor)
                 .buildAsync();
 
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
         RuntimeException exception = new RuntimeException();
 
-        Future<String> future = cache.getAsync("keyA", _key -> {
+        Future<String> future1 = cache.getAsync("keyA", _key -> {
+            startLatch.countDown();
+            await(finishLatch);
             throw exception;
         });
 
-        assertFails(future).isInstanceOf(ExecutionException.class).havingCause().isSameAs(exception);
+        await(startLatch);
+
+        Future<String> future2 = cache.getAsync("keyA", _key -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        finishLatch.countDown();
+
+        assertFails(future1).isSameAs(exception);
+        assertFails(future2).isSameAs(exception);
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
@@ -207,7 +221,7 @@ final class AsyncCacheTest {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch finishLatch = new CountDownLatch(1);
 
-        Future<String> future = cache.getAsync("keyA", _key -> {
+        Future<String> future1 = cache.getAsync("keyA", _key -> {
             startLatch.countDown();
             await(finishLatch);
             return "valueA1";
@@ -215,15 +229,21 @@ final class AsyncCacheTest {
 
         await(startLatch);
 
-        future.cancel(true);
+        Future<String> future2 = cache.getAsync("keyA", _key -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        future1.cancel(true);
 
         finishLatch.countDown();
 
-        // Ensure the cache loader task has completed
-        shutdownAndAwaitTermination(executor);
+        assertCancelled(future1);
+        assertSucceeds(future2).isEqualTo("valueA1");
 
-        assertThat(cache.getIfPresent("keyA")).isNull();
-        assertThat(cache.entries()).toIterable().isEmpty();
+        assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
+        assertThat(cache.entries()).toIterable().containsExactlyInAnyOrder(Map.entry("keyA", "valueA1"));
     }
 
     @Test
@@ -284,20 +304,28 @@ final class AsyncCacheTest {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch finishLatch = new CountDownLatch(1);
 
-        Future<Map<String, String>> future = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+        Future<Map<String, String>> future1 = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
             startLatch.countDown();
             await(finishLatch);
             return Map.of("keyA", "valueA1");
         });
 
+        await(startLatch);
+
+        Future<Map<String, String>> future2 = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.getIfPresent("keyB")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
 
-        await(startLatch);
         finishLatch.countDown();
 
-        assertSucceeds(future).isEqualTo(Map.of("keyA", "valueA1"));
+        assertSucceeds(future1).isEqualTo(Map.of("keyA", "valueA1"));
+        assertSucceeds(future2).isEqualTo(Map.of("keyA", "valueA1"));
 
         assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
         assertThat(cache.getIfPresent("keyB")).isNull();
@@ -314,13 +342,28 @@ final class AsyncCacheTest {
                 .executor(_name -> executor)
                 .buildAsync();
 
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
         RuntimeException exception = new RuntimeException();
 
-        Future<Map<String, String>> future = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+        Future<Map<String, String>> future1 = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+            startLatch.countDown();
+            await(finishLatch);
             throw exception;
         });
 
-        assertFails(future).isInstanceOf(ExecutionException.class).havingCause().isSameAs(exception);
+        await(startLatch);
+
+        Future<Map<String, String>> future2 = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        finishLatch.countDown();
+
+        assertFails(future1).isSameAs(exception);
+        assertFails(future2).isSameAs(exception);
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.getIfPresent("keyB")).isNull();
@@ -340,7 +383,7 @@ final class AsyncCacheTest {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch finishLatch = new CountDownLatch(1);
 
-        Future<Map<String, String>> future = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
+        Future<Map<String, String>> future1 = cache.getAllAsync(Set.of("keyA", "keyB"), _keys -> {
             startLatch.countDown();
             await(finishLatch);
             return Map.of("keyA", "valueA1");
@@ -348,12 +391,18 @@ final class AsyncCacheTest {
 
         await(startLatch);
 
-        future.cancel(true);
+        Future<Map<String, String>> future2 = cache.getAllAsync(Set.of("keyA", "keyB"), _key -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        future1.cancel(true);
 
         finishLatch.countDown();
 
-        // Ensure the cache loader task has completed
-        shutdownAndAwaitTermination(executor);
+        assertCancelled(future1);
+        assertSucceeds(future2).isEqualTo(Map.of("keyA", "valueA1"));
 
         assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
         assertThat(cache.getIfPresent("keyB")).isNull();
@@ -735,7 +784,18 @@ final class AsyncCacheTest {
     }
 
     private static ThrowableAssertAlternative<?> assertFails(Future<?> future) {
-        return assertThat(future).failsWithin(1, TimeUnit.SECONDS).withThrowableThat();
+        return assertThat(future)
+                .failsWithin(1, TimeUnit.SECONDS)
+                .withThrowableThat()
+                .isInstanceOf(ExecutionException.class)
+                .havingCause();
+    }
+
+    private static void assertCancelled(Future<?> future) {
+        assertThat(future)
+                .failsWithin(1, TimeUnit.SECONDS)
+                .withThrowableThat()
+                .isInstanceOf(CancellationException.class);
     }
 
     private static void await(CountDownLatch latch) {
