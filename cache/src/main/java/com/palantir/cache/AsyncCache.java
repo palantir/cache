@@ -82,11 +82,10 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * other mappings of this cache.
      *
      * @param key the key with which the specified value is to be associated
-     * @param mappingFunction the function to asynchronously compute a value, optionally using the given executor
+     * @param mappingFunction the function to compute a value
      * @return the current (existing or computed) future value associated with the specified key
-     * @throws NullPointerException if the specified key or mappingFunction is null, or if the future returned by the
-     *         mappingFunction is null
-     * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is left unestablished
+     * @throws NullPointerException if the specified collection is null or contains a null element, or if the map
+     *         returned by the mappingFunction is null
      */
     CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction);
 
@@ -148,8 +147,8 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * @param mappingFunction the function to asynchronously compute the values
      * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
      *     this cache
-     * @throws NullPointerException if the specified collection is null or contains a null element, or
-     *     if the future returned by the mappingFunction is null
+     * @throws NullPointerException if the specified collection is null or contains a null element, or if the map
+     *         returned by the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
      *     left unestablished
      */
