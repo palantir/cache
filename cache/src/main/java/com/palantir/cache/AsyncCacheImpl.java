@@ -56,7 +56,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     }
 
     @Override
-    public CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction) {
+    public Future<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction) {
         return getAsyncInternal(key, mappingFunction).copy();
     }
 
@@ -79,7 +79,7 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
     }
 
     @Override
-    public CompletableFuture<Map<K, V>> getAllAsync(
+    public Future<Map<K, V>> getAllAsync(
             Iterable<? extends K> keys,
             Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
         try (Loader<Set<? extends K>, Map<? extends K, ? extends V>> loader = loader(mappingFunction)) {

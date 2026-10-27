@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
@@ -87,7 +86,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * @throws NullPointerException if the specified collection is null or contains a null element, or if the map
      *         returned by the mappingFunction is null
      */
-    CompletableFuture<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction);
+    Future<V> getAsync(K key, Function<? super K, ? extends V> mappingFunction);
 
     /**
      * Returns a map of the values associated with the {@code keys} in this cache. The returned map will only contain
@@ -152,7 +151,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
      *     left unestablished
      */
-    CompletableFuture<Map<K, V>> getAllAsync(
+    Future<Map<K, V>> getAllAsync(
             Iterable<? extends K> keys,
             Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
 

@@ -16,7 +16,6 @@
 
 package com.palantir.cache;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 
@@ -67,5 +66,5 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
      * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping is left
      *         unestablished
      */
-    CompletableFuture<V> getAsync(K key);
+    Future<V> getAsync(K key);
 }
