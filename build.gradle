@@ -49,6 +49,10 @@ allprojects {
         mavenCentral() { metadataSources { mavenPom(); ignoreGradleMetadataRedirection() } }
     }
 
+    dependencies {
+        errorprone 'com.palantir.assertj-automation:assertj-error-prone'
+    }
+
     tasks.withType(JavaCompile) {
         options.compilerArgs += [
             '-Xlint:rawtypes',
