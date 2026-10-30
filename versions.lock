@@ -1,6 +1,6 @@
 # Run ./gradlew writeVersionsLocks to regenerate this file. Blank lines are to minimize merge conflicts.
 
-com.github.ben-manes.caffeine:caffeine:3.3.1 (3 constraints: 32288e45)
+com.github.ben-manes.caffeine:caffeine:3.3.1 (3 constraints: 33288f45)
 
 com.github.kevinstern:software-and-algorithms:1.0 (1 constraints: 7e12fcf5)
 
@@ -28,31 +28,31 @@ com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 c
 
 com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
-com.palantir.nylon:nylon-threads:0.16.0 (1 constraints: 3f103ea2)
+com.palantir.nylon:nylon-threads:0.17.0 (1 constraints: 401041a2)
 
-com.palantir.safe-logging:logger:3.21.0 (5 constraints: e94a593b)
+com.palantir.safe-logging:logger:3.21.0 (5 constraints: e44a6236)
 
 com.palantir.safe-logging:logger-slf4j:3.21.0 (1 constraints: 310e8e50)
 
 com.palantir.safe-logging:logger-spi:3.21.0 (2 constraints: 711e42b0)
 
-com.palantir.safe-logging:preconditions:3.21.0 (7 constraints: de60204a)
+com.palantir.safe-logging:preconditions:3.21.0 (7 constraints: da604144)
 
-com.palantir.safe-logging:safe-logging:3.21.0 (10 constraints: e88f636d)
+com.palantir.safe-logging:safe-logging:3.21.0 (10 constraints: e48f3c63)
 
 com.palantir.tracing:tracing:6.42.0 (1 constraints: 3e05593b)
 
 com.palantir.tracing:tracing-api:6.42.0 (2 constraints: 11129f18)
 
-com.palantir.tritium:tritium-api:0.139.0 (2 constraints: 9b1f24f5)
+com.palantir.tritium:tritium-api:0.140.0 (2 constraints: 8b1f7ef3)
 
-com.palantir.tritium:tritium-caffeine:0.139.0 (1 constraints: 6f05af40)
+com.palantir.tritium:tritium-caffeine:0.140.0 (1 constraints: 67059840)
 
-com.palantir.tritium:tritium-core:0.139.0 (1 constraints: 7510beb2)
+com.palantir.tritium:tritium-core:0.140.0 (1 constraints: 6d10a7b2)
 
-com.palantir.tritium:tritium-metrics:0.139.0 (1 constraints: af100ec3)
+com.palantir.tritium:tritium-metrics:0.140.0 (1 constraints: a710f7c2)
 
-com.palantir.tritium:tritium-registry:0.139.0 (3 constraints: 912699ca)
+com.palantir.tritium:tritium-registry:0.140.0 (3 constraints: 7926e4c5)
 
 io.dropwizard.metrics:metrics-core:4.2.40 (3 constraints: 80314704)
 
