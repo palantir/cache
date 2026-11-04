@@ -20,16 +20,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.palantir.tracing.AlwaysSampler;
 import com.palantir.tracing.Observability;
+import com.palantir.tracing.RandomSampler;
 import com.palantir.tracing.Tracer;
 import com.palantir.tracing.Tracers;
 import com.palantir.tracing.api.OpenSpan;
 import com.palantir.tracing.api.Span;
 import com.palantir.tracing.api.SpanType;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -779,6 +783,114 @@ final class AsyncCacheTest {
         });
     }
 
+    @Test
+    void tracing_waitForInFlightLoad() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        Future<String> future = cache.getAsync("keyA", _key -> {
+            startLatch.countDown();
+            await(finishLatch);
+            return "valueA1";
+        });
+
+        await(startLatch);
+
+        String traceId = Tracers.randomId();
+        Tracer.initTraceWithSpan(Observability.SAMPLE, traceId, "root", SpanType.LOCAL);
+
+        OpenSpan parentSpan = Tracer.startSpan("parent");
+
+        Thread waiter = Thread.currentThread();
+        executor.execute(() -> {
+            awaitWaiting(waiter);
+            finishLatch.countDown();
+        });
+
+        List<Span> spans = collectSpans(() -> {
+            assertThat(cache.get("keyA", _key -> fail("Unexpected load"))).isEqualTo("valueA1");
+        });
+
+        assertThat(spans)
+                .filteredOn(span -> span.getOperation().equals("test cache wait"))
+                .singleElement()
+                .satisfies(span -> {
+                    assertThat(span.getTraceId()).isEqualTo(traceId);
+                    assertThat(span.getParentSpanId()).contains(parentSpan.getSpanId());
+                });
+        assertSucceeds(future).isEqualTo("valueA1");
+    }
+
+    @Test
+    void tracing_noWaitSpanForLoadedValue() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        cache.put("keyA", "valueA1");
+
+        Tracer.initTraceWithSpan(Observability.SAMPLE, Tracers.randomId(), "root", SpanType.LOCAL);
+
+        List<Span> spans = collectSpans(() -> {
+            assertThat(cache.get("keyA", _key -> fail("Unexpected load"))).isEqualTo("valueA1");
+        });
+
+        assertThat(spans).isEmpty();
+    }
+
+    @Test
+    void tracing_noWaitSpanWithoutTrace() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        Future<String> future = cache.getAsync("keyA", _key -> {
+            startLatch.countDown();
+            await(finishLatch);
+            return "valueA1";
+        });
+
+        await(startLatch);
+
+        Thread waiter = Thread.currentThread();
+        executor.execute(() -> {
+            awaitWaiting(waiter);
+            finishLatch.countDown();
+        });
+
+        // Sample every new trace so that a span started on this untraced thread would be observed.
+        Tracer.setSampler(AlwaysSampler.INSTANCE);
+        try {
+            List<Span> spans = collectSpans(() -> {
+                assertThat(cache.get("keyA", _key -> fail("Unexpected load"))).isEqualTo("valueA1");
+            });
+
+            assertThat(spans).noneMatch(span -> span.getOperation().equals("test cache wait"));
+        } finally {
+            Tracer.setSampler(RandomSampler.create(0.0005f));
+        }
+        assertSucceeds(future).isEqualTo("valueA1");
+    }
+
     private static <T> ObjectAssert<T> assertSucceeds(Future<T> future) {
         return assertThat(future).succeedsWithin(1, TimeUnit.SECONDS);
     }
@@ -796,6 +908,25 @@ final class AsyncCacheTest {
                 .failsWithin(1, TimeUnit.SECONDS)
                 .withThrowableThat()
                 .isInstanceOf(CancellationException.class);
+    }
+
+    private static List<Span> collectSpans(Runnable runnable) {
+        List<Span> spans = new CopyOnWriteArrayList<>();
+        Tracer.subscribe("test", spans::add);
+        try {
+            runnable.run();
+        } finally {
+            Tracer.unsubscribe("test");
+        }
+        return spans;
+    }
+
+    private static void awaitWaiting(Thread thread) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (thread.getState() != Thread.State.WAITING) {
+            assertThat(deadline - System.nanoTime()).isPositive();
+            Thread.onSpinWait();
+        }
     }
 
     private static void await(CountDownLatch latch) {
