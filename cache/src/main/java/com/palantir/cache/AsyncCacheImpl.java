@@ -21,6 +21,8 @@ import static com.palantir.logsafe.Preconditions.checkState;
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.MustBeClosed;
 import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import com.palantir.tracing.CloseableTracer;
+import com.palantir.tracing.Tracer;
 import com.palantir.tracing.Tracers;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,10 +39,12 @@ import org.jspecify.annotations.Nullable;
 class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
     private final String loadOperation;
+    private final String waitOperation;
     private final com.github.benmanes.caffeine.cache.AsyncCache<K, V> cache;
 
     AsyncCacheImpl(String name, com.github.benmanes.caffeine.cache.AsyncCache<K, V> cache) {
         this.loadOperation = name + " cache load";
+        this.waitOperation = name + " cache wait";
         this.cache = cache;
     }
 
@@ -118,7 +122,18 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
                 cache.synchronous().asMap().entrySet().iterator());
     }
 
-    private static <T> T await(Future<T> future) {
+    // Callers that join a load started by another thread have no load span in their trace, so span the wait itself.
+    // Only sampled traces get the span: starting one on a thread without a trace would create a new root trace.
+    private <T> T await(Future<T> future) {
+        if (future.isDone() || !Tracer.isTraceObservable()) {
+            return awaitInternal(future);
+        }
+        try (CloseableTracer ignored = CloseableTracer.startSpan(waitOperation)) {
+            return awaitInternal(future);
+        }
+    }
+
+    private static <T> T awaitInternal(Future<T> future) {
         try {
             return future.get();
         } catch (ExecutionException e) {
