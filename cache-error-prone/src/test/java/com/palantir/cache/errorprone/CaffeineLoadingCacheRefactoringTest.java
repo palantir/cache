@@ -161,6 +161,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_null_checks_on_cache_reads() {
         // language=java
@@ -225,6 +226,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_existing_preconditions_check_on_cache_reads() {
         // language=java
@@ -309,6 +311,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void refactors_simple_loading_cache() {
         // language=java
@@ -365,6 +368,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void infers_cache_name() {
         // language=java
@@ -423,6 +427,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_default_maximum_size() {
         // language=java
@@ -478,6 +483,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_write_duration() {
         // language=java
@@ -538,6 +544,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_write_time_unit() {
         // language=java
@@ -599,6 +606,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_access_duration() {
         // language=java
@@ -659,6 +667,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_access_time_unit() {
         // language=java
@@ -720,6 +729,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_cache_stats_wrapper() {
         // language=java
@@ -782,6 +792,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_legacy_cache_name() {
         // language=java
@@ -849,6 +860,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void nested_type_params_on_cache_type_params_are_preserved() {
         // language=java
@@ -909,6 +921,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void refactors_multiple_caches_in_same_class() {
         // language=java
@@ -989,6 +1002,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void refactors_multiple_caches_in_multiple_classes() {
         // language=java
@@ -1106,6 +1120,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expiry_name_clash_with_caffeine_expiry() {
         // language=java
@@ -1200,6 +1215,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_lambda() {
         // language=java
@@ -1258,6 +1274,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_method_reference() {
         // language=java
@@ -1316,6 +1333,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_system_ticker() {
         // language=java
@@ -1375,6 +1393,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_system_ticker_with_import_conflict() {
         // language=java
@@ -1439,6 +1458,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_with_expiry() {
         // language=java
@@ -1502,6 +1522,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_ticker_anonymous_class() {
         // language=java
@@ -1631,6 +1652,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", input);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_anonymous_class() {
         // language=java
@@ -1720,6 +1742,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_anonymous_class_with_import_conflict() {
         // language=java
@@ -1813,6 +1836,7 @@ final class CaffeineLoadingCacheRefactoringTest {
         assertCompiles("Test.java", output);
     }
 
+    @SuppressWarnings("for-rollout:MisformattedTestData")
     @Test
     void handles_expire_after_anonymous_class_with_ticker() {
         // language=java
