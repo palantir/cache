@@ -55,6 +55,7 @@ public enum Cache {
     @CheckReturnValue
     public interface SizeBuilder<K, V extends @Nullable Object> {
 
+        /** Bounds the number of entries to {@code maximumSize}. */
         ExpiryBuilder<K, V> maximumSize(long maximumSize);
 
         /** Bounds the total weight of entries, as computed by {@code weigher}, to {@code maximumSize}. */

@@ -678,7 +678,7 @@ final class AsyncCacheTest {
 
         assertThat(cache.entries()).toIterable().hasSize(1);
 
-        cache.put("keyB", "valueB2");
+        cache.put("keyB", "valueB1");
 
         // maximumSize is enforced by a background task
         shutdownAndAwaitTermination(executor);
