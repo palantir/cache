@@ -57,6 +57,7 @@ public enum Cache {
 
         ExpiryBuilder<K, V> maximumSize(long maximumSize);
 
+        /** Bounds the total weight of entries, as computed by {@code weigher}, to {@code maximumSize}. */
         ExpiryBuilder<K, V> maximumSize(long maximumSize, Weigher<? super K, ? super V> weigher);
     }
 

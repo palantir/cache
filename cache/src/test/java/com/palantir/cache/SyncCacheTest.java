@@ -280,6 +280,29 @@ final class SyncCacheTest {
     }
 
     @Test
+    void maximumSize_weigher() {
+        SyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(2, (_key, _value) -> 2)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildSync();
+
+        cache.put("keyA", "valueA1");
+
+        assertThat(cache.entries()).toIterable().hasSize(1);
+
+        cache.put("keyB", "valueB2");
+
+        // maximumSize is enforced by a background task
+        shutdownAndAwaitTermination(executor);
+
+        assertThat(cache.getAllPresent(Set.of("keyA", "keyB"))).hasSize(1);
+        assertThat(cache.entries()).toIterable().hasSize(1);
+    }
+
+    @Test
     void expiry_afterCreate() {
         Expiry<String, String> expiry = new DefaultExpiry<>() {
             @Override
