@@ -169,10 +169,11 @@ final class CacheBuilder<K, V>
         }
 
         Caffeine<K, V> builder = ((Caffeine<K, V>) Caffeine.newBuilder())
-                .maximumSize(maximumSize)
                 .executor(checkNotNull(executorFactory).create(name + "-cache"));
         if (weigher != null) {
-            builder = builder.weigher(new WeigherAdapter<>(weigher));
+            builder = builder.maximumWeight(maximumSize).weigher(new WeigherAdapter<>(weigher));
+        } else {
+            builder = builder.maximumSize(maximumSize);
         }
         if (expiry != null) {
             builder = builder.expireAfter(new ExpiryAdapter<>(expiry));
