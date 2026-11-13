@@ -29,22 +29,24 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.assertj.core.api.ObjectAssert;
+import org.assertj.core.api.ThrowableAssertAlternative;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class SyncCacheTest {
 
-    private ExecutorService executor;
+    private TrackingExecutorService executor;
 
     @BeforeEach
     void before() {
-        executor = Executors.newCachedThreadPool();
+        executor = new TrackingExecutorService(Executors.newCachedThreadPool());
     }
 
     @AfterEach
@@ -128,6 +130,42 @@ final class SyncCacheTest {
                     });
                 })
                 .isSameAs(exception);
+
+        assertThat(cache.getIfPresent("keyA")).isNull();
+        assertThat(cache.entries()).toIterable().isEmpty();
+    }
+
+    @Test
+    void get_interrupt() {
+        SyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildSync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        AtomicReference<Thread> thread = new AtomicReference<>();
+
+        Future<String> future = executor.submit(() -> {
+            thread.set(Thread.currentThread());
+            return cache.get("keyA", _key -> {
+                startLatch.countDown();
+                await(finishLatch);
+                return "valueA1";
+            });
+        });
+
+        await(startLatch);
+
+        thread.get().interrupt();
+
+        assertFails(future).isInstanceOf(RuntimeException.class).havingCause().isInstanceOf(InterruptedException.class);
+
+        finishLatch.countDown();
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
@@ -267,13 +305,19 @@ final class SyncCacheTest {
                 .buildSync();
 
         cache.put("keyA", "valueA1");
+        // maximumSize is enforced by a background maintenance task, but that background maintenance task will not be
+        // scheduled if a background maintenance task is currently running. In that case, then the background
+        // maintenance task will be scheduled on the next cache access.
+        //
+        // We need to ensure that the background task in scheduled on the subsequent put, so we need to ensure that the
+        // background mainteance task submitted by this put is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.entries()).toIterable().hasSize(1);
 
         cache.put("keyB", "valueB2");
-
-        // maximumSize is enforced by a background task
-        shutdownAndAwaitTermination(executor);
+        // Ensure that the background mainteance task submitted by this put, which enforces maximumSize, is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.getAllPresent(Set.of("keyA", "keyB"))).hasSize(1);
         assertThat(cache.entries()).toIterable().hasSize(1);
@@ -290,13 +334,19 @@ final class SyncCacheTest {
                 .buildSync();
 
         cache.put("keyA", "valueA1");
+        // maximumSize is enforced by a background maintenance task, but that background maintenance task will not be
+        // scheduled if a background maintenance task is currently running. In that case, then the background
+        // maintenance task will be scheduled on the next cache access.
+        //
+        // We need to ensure that the background task in scheduled on the subsequent put, so we need to ensure that the
+        // background mainteance task submitted by this put is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.entries()).toIterable().hasSize(1);
 
         cache.put("keyB", "valueB1");
-
-        // maximumSize is enforced by a background task
-        shutdownAndAwaitTermination(executor);
+        // Ensure that the background mainteance task submitted by this put, which enforces maximumSize, is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.getAllPresent(Set.of("keyA", "keyB"))).hasSize(1);
         assertThat(cache.entries()).toIterable().hasSize(1);
@@ -425,19 +475,17 @@ final class SyncCacheTest {
         return assertThat(future).succeedsWithin(1, TimeUnit.SECONDS);
     }
 
+    private static ThrowableAssertAlternative<?> assertFails(Future<?> future) {
+        return assertThat(future)
+                .failsWithin(1, TimeUnit.SECONDS)
+                .withThrowableThat()
+                .isInstanceOf(ExecutionException.class)
+                .havingCause();
+    }
+
     private static void await(CountDownLatch latch) {
         try {
             assertThat(latch.await(1, TimeUnit.SECONDS)).isTrue();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static void shutdownAndAwaitTermination(ExecutorService executor) {
-        executor.shutdown();
-        try {
-            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);

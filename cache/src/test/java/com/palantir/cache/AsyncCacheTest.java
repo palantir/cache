@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.palantir.logsafe.exceptions.SafeRuntimeException;
+import com.palantir.logsafe.testing.LoggableExceptionAssert;
 import com.palantir.tracing.AlwaysSampler;
 import com.palantir.tracing.Observability;
 import com.palantir.tracing.RandomSampler;
@@ -36,10 +38,10 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.assertj.core.api.ObjectAssert;
 import org.assertj.core.api.ThrowableAssertAlternative;
 import org.junit.jupiter.api.AfterEach;
@@ -48,11 +50,11 @@ import org.junit.jupiter.api.Test;
 
 final class AsyncCacheTest {
 
-    private ExecutorService executor;
+    private TrackingExecutorService executor;
 
     @BeforeEach
     void before() {
-        executor = Executors.newCachedThreadPool();
+        executor = new TrackingExecutorService(Executors.newCachedThreadPool());
     }
 
     @AfterEach
@@ -130,10 +132,69 @@ final class AsyncCacheTest {
                         throw exception;
                     });
                 })
-                .isSameAs(exception);
+                .isSameAs(exception)
+                .satisfies(throwable -> {
+                    assertThat(throwable.getSuppressed())
+                            .singleElement()
+                            .asInstanceOf(LoggableExceptionAssert.instanceOfAssertFactory())
+                            .isInstanceOf(SafeRuntimeException.class)
+                            .hasLogMessage("Cache load failed")
+                            .hasNoArgs()
+                            .hasStackTraceContaining(getClass().getName());
+                });
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
+    }
+
+    @Test
+    void get_interrupt() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        AtomicReference<Thread> thread = new AtomicReference<>();
+
+        Future<String> future1 = executor.submit(() -> {
+            thread.set(Thread.currentThread());
+            return cache.get("keyA", _key -> {
+                startLatch.countDown();
+                await(finishLatch);
+                return "valueA1";
+            });
+        });
+
+        await(startLatch);
+
+        Future<String> future2 = cache.getAsync("keyA", _key -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        thread.get().interrupt();
+
+        assertFails(future1)
+                .asInstanceOf(LoggableExceptionAssert.instanceOfAssertFactory())
+                .isInstanceOf(SafeRuntimeException.class)
+                .hasLogMessage("Cache load interrupted")
+                .hasNoArgs()
+                .cause()
+                .isInstanceOf(InterruptedException.class);
+
+        finishLatch.countDown();
+
+        assertSucceeds(future2).isEqualTo("valueA1");
+
+        assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
+        assertThat(cache.entries()).toIterable().containsExactlyInAnyOrder(Map.entry("keyA", "valueA1"));
     }
 
     @Test
@@ -288,11 +349,71 @@ final class AsyncCacheTest {
                         throw exception;
                     });
                 })
-                .isSameAs(exception);
+                .isSameAs(exception)
+                .satisfies(throwable -> {
+                    assertThat(throwable.getSuppressed())
+                            .singleElement()
+                            .asInstanceOf(LoggableExceptionAssert.instanceOfAssertFactory())
+                            .isInstanceOf(SafeRuntimeException.class)
+                            .hasLogMessage("Cache load failed")
+                            .hasNoArgs()
+                            .hasStackTraceContaining(getClass().getName());
+                });
 
         assertThat(cache.getIfPresent("keyA")).isNull();
         assertThat(cache.getIfPresent("keyB")).isNull();
         assertThat(cache.entries()).toIterable().isEmpty();
+    }
+
+    @Test
+    void getAll_interrupt() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        AtomicReference<Thread> thread = new AtomicReference<>();
+
+        Future<Map<String, String>> future1 = executor.submit(() -> {
+            thread.set(Thread.currentThread());
+            return cache.getAll(Set.of("keyA", "keyB"), _keys -> {
+                startLatch.countDown();
+                await(finishLatch);
+                return Map.of("keyA", "valueA1");
+            });
+        });
+
+        await(startLatch);
+
+        Future<Map<String, String>> future2 = cache.getAllAsync(Set.of("keyA", "keyB"), _key -> {
+            return fail();
+        });
+
+        assertThat(future1).isNotSameAs(future2);
+
+        thread.get().interrupt();
+
+        assertFails(future1)
+                .asInstanceOf(LoggableExceptionAssert.instanceOfAssertFactory())
+                .isInstanceOf(SafeRuntimeException.class)
+                .hasLogMessage("Cache load interrupted")
+                .hasNoArgs()
+                .cause()
+                .isInstanceOf(InterruptedException.class);
+
+        finishLatch.countDown();
+
+        assertSucceeds(future2).isEqualTo(Map.of("keyA", "valueA1"));
+
+        assertThat(cache.getIfPresent("keyA")).isEqualTo("valueA1");
+        assertThat(cache.getIfPresent("keyB")).isNull();
+        assertThat(cache.entries()).toIterable().containsExactlyInAnyOrder(Map.entry("keyA", "valueA1"));
     }
 
     @Test
@@ -652,13 +773,19 @@ final class AsyncCacheTest {
                 .buildAsync();
 
         cache.put("keyA", "valueA1");
+        // maximumSize is enforced by a background maintenance task, but that background maintenance task will not be
+        // scheduled if a background maintenance task is currently running. In that case, then the background
+        // maintenance task will be scheduled on the next cache access.
+        //
+        // We need to ensure that the background task in scheduled on the subsequent put, so we need to ensure that the
+        // background mainteance task submitted by this put is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.entries()).toIterable().hasSize(1);
 
         cache.put("keyB", "valueB2");
-
-        // maximumSize is enforced by a background task
-        shutdownAndAwaitTermination(executor);
+        // Ensure that the background mainteance task submitted by this put, which enforces maximumSize, is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.getAllPresent(Set.of("keyA", "keyB"))).hasSize(1);
         assertThat(cache.entries()).toIterable().hasSize(1);
@@ -675,13 +802,19 @@ final class AsyncCacheTest {
                 .buildAsync();
 
         cache.put("keyA", "valueA1");
+        // maximumSize is enforced by a background maintenance task, but that background maintenance task will not be
+        // scheduled if a background maintenance task is currently running. In that case, then the background
+        // maintenance task will be scheduled on the next cache access.
+        //
+        // We need to ensure that the background task in scheduled on the subsequent put, so we need to ensure that the
+        // background mainteance task submitted by this put is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.entries()).toIterable().hasSize(1);
 
         cache.put("keyB", "valueB1");
-
-        // maximumSize is enforced by a background task
-        shutdownAndAwaitTermination(executor);
+        // Ensure that the background mainteance task submitted by this put, which enforces maximumSize, is completed.
+        executor.awaitAllTasks();
 
         assertThat(cache.getAllPresent(Set.of("keyA", "keyB"))).hasSize(1);
         assertThat(cache.entries()).toIterable().hasSize(1);
@@ -955,16 +1088,6 @@ final class AsyncCacheTest {
     private static void await(CountDownLatch latch) {
         try {
             assertThat(latch.await(1, TimeUnit.SECONDS)).isTrue();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static void shutdownAndAwaitTermination(ExecutorService executor) {
-        executor.shutdown();
-        try {
-            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);

@@ -36,9 +36,9 @@ com.palantir.safe-logging:logger-slf4j:3.21.0 (1 constraints: 310e8e50)
 
 com.palantir.safe-logging:logger-spi:3.21.0 (2 constraints: 711e42b0)
 
-com.palantir.safe-logging:preconditions:3.21.0 (7 constraints: db60fb44)
+com.palantir.safe-logging:preconditions:3.21.0 (8 constraints: 357575b2)
 
-com.palantir.safe-logging:safe-logging:3.21.0 (10 constraints: e58ff663)
+com.palantir.safe-logging:safe-logging:3.21.0 (11 constraints: 3fa44f4b)
 
 com.palantir.tracing:tracing:6.43.0 (1 constraints: 3f055c3b)
 
@@ -112,13 +112,15 @@ com.google.testing.compile:compile-testing:0.24.0 (1 constraints: 8c149e75)
 
 com.google.truth:truth:1.4.5 (2 constraints: 7c26696b)
 
+com.palantir.safe-logging:preconditions-assertj:3.21.0 (1 constraints: 38053c3b)
+
 junit:junit:4.13.2 (3 constraints: 6d31ed4f)
 
 net.bytebuddy:byte-buddy:1.18.3 (1 constraints: 530b55df)
 
 org.apiguardian:apiguardian-api:1.1.2 (6 constraints: 5366ce6e)
 
-org.assertj:assertj-core:3.27.7 (1 constraints: 4505553b)
+org.assertj:assertj-core:3.27.7 (2 constraints: ac190ce1)
 
 org.commonmark:commonmark:0.29.0 (2 constraints: 4625402c)
 
