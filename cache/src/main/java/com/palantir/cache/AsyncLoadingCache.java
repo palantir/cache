@@ -67,4 +67,13 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
      *         unestablished
      */
     Future<V> getAsync(K key);
+
+    /*
+     * This interface intentionally does not support refresh() because it is does not provide the desired
+     * linearizability properties. The cache only supports one in-flight load per entry, so attempting to refresh an
+     * entry with an in-flight load will piggy-back on that in-flight load. This can lead to surprising behavior where
+     * outdated entries remain in the cache after a refresh has occurred.
+     *
+     * See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+     */
 }

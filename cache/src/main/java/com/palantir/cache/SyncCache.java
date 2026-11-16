@@ -83,12 +83,14 @@ public interface SyncCache<K, V extends @Nullable Object> {
      */
     Map<K, V> getAllPresent(Iterable<? extends K> keys);
 
-    // This interface intentionally does not support getAll() because it is does not provide the desired linearizability
-    // properties. The loads in getAll() are performed outside of the backing concurrent map locks and thus will not be
-    // removed by a concurrent invalidate() request. This can lead to surprising behavior where outdated entries are
-    // added to the cache after an invalidation has occurred.
-    //
-    // See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+    /*
+     * This interface intentionally does not support getAll() because it is does not provide the desired linearizability
+     * properties. The loads in getAll() are performed outside of the backing concurrent map locks and thus will not be
+     * removed by a concurrent invalidate() request. This can lead to surprising behavior where outdated entries are
+     * added to the cache after an invalidation has occurred.
+     *
+     * See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+     */
 
     /**
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously contained a value
@@ -132,20 +134,34 @@ public interface SyncCache<K, V extends @Nullable Object> {
      */
     void invalidateAll(Iterable<? extends K> keys);
 
-    // This interface intentionally does not support invalidateAll() because it is does not provide the desired
-    // linearizability properties. The cache does not have visibility into in-flight computations (because the backing
-    // concurrent map does not expose them) and thus cannot invalidate these in-flight computations. This can lead to
-    // surprising behavior where outdated entries are added to the cache after an invalidation has occurred.
-    //
-    // See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+    /*
+     * This interface intentionally does not support invalidateAll() because it is does not provide the desired
+     * linearizability properties. The cache does not have visibility into in-flight computations (because the backing
+     * concurrent map does not expose them) and thus cannot invalidate these in-flight computations. This can lead to
+     * surprising behavior where outdated entries are added to the cache after an invalidation has occurred.
+     *
+     * See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+     */
 
-    // This interface intentionally does not support asMap() because we do not want to support cache mutations outside
-    // of the methods explicitly provide as part of this interface. We cannot guarantee the map implementation returned
-    // by Caffeine has the desired behavior. For example, it is impractical to provide a sensible, performant
-    // implementation of methods like Map.compute() for an async cache with in-flight computations.
-    //
-    // It is reasonable for callers to want to obtain snapshots of cache entries, so we provide this method to allow
-    // callers to iterate over the realized cache entries. This method intentionally returns an Iterator to avoid
-    // providing Collection methods which may have surprising behavior.
+    /*
+     * This interface intentionally does not support asMap() because we do not want to support cache mutations outside
+     * of the methods explicitly provide as part of this interface. We cannot guarantee the map implementation returned
+     * by Caffeine has the desired behavior. For example, it is impractical to provide a sensible, performant
+     * implementation of methods like Map.compute() for an async cache with in-flight computations.
+     *
+     * It is reasonable for callers to want to obtain snapshots of cache entries, so we provide this method to allow
+     * callers to iterate over the realized cache entries. This method intentionally returns an Iterator to avoid
+     * providing Collection methods which may have surprising behavior.
+     */
+
+    /**
+     * Returns an unmodifiable thread-safe iterator of the entries stored in this cache.
+     * <p>
+     * This iterator is at least <i>weakly consistent</i>: it is safe for concurrent use, but if the cache is modified
+     * (including by eviction) after the iterator is created, it is undefined which of the changes (if any) will be
+     * reflected in that iterator.
+     *
+     * @return an unmodifiable thread-safe iterator of the entries stored in this cache
+     */
     Iterator<Entry<K, V>> entries();
 }
