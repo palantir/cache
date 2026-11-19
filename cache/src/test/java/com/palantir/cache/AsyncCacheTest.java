@@ -148,6 +148,52 @@ final class AsyncCacheTest {
     }
 
     @Test
+    void get_exceptionForWaitingCallers() {
+        AsyncCache<String, String> cache = Cache.<String, String>builder()
+                .name("test")
+                .maximumSize(10)
+                .noExpiry()
+                .noMetrics()
+                .executor(_name -> executor)
+                .buildAsync();
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(1);
+
+        RuntimeException exception = new RuntimeException();
+        AtomicReference<Thread> thread = new AtomicReference<>();
+
+        Future<String> future = executor.submit(() -> {
+            thread.set(Thread.currentThread());
+            return cache.get("keyA", _key -> {
+                startLatch.countDown();
+                await(finishLatch);
+                throw exception;
+            });
+        });
+
+        await(startLatch);
+
+        Thread waiter = Thread.currentThread();
+        executor.execute(() -> {
+            awaitWaiting(thread.get());
+            awaitWaiting(waiter);
+            finishLatch.countDown();
+        });
+
+        assertThatThrownBy(() -> cache.get("keyA", _key -> fail("Unexpected load")))
+                .isSameAs(exception);
+        assertFails(future).isSameAs(exception);
+
+        assertThat(exception.getSuppressed())
+                .singleElement()
+                .asInstanceOf(LoggableExceptionAssert.instanceOfAssertFactory())
+                .isInstanceOf(SafeRuntimeException.class)
+                .hasLogMessage("Cache load failed")
+                .hasNoArgs();
+    }
+
+    @Test
     void get_interrupt() {
         AsyncCache<String, String> cache = Cache.<String, String>builder()
                 .name("test")

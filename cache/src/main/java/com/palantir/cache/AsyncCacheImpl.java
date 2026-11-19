@@ -38,6 +38,8 @@ import org.jspecify.annotations.Nullable;
 
 class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
 
+    private static final String LOAD_FAILED = "Cache load failed";
+
     private final String loadOperation;
     private final String waitOperation;
     private final com.github.benmanes.caffeine.cache.AsyncCache<K, V> cache;
@@ -139,17 +141,31 @@ class AsyncCacheImpl<K, V> implements AsyncCache<K, V> {
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof RuntimeException runtimeException) {
-                runtimeException.addSuppressed(new SafeRuntimeException("Cache load failed"));
+                addCallerStackTrace(runtimeException);
                 throw runtimeException;
             } else if (cause instanceof Error error) {
-                error.addSuppressed(new SafeRuntimeException("Cache load failed"));
+                addCallerStackTrace(error);
                 throw error;
             } else {
-                throw new SafeRuntimeException("Cache load failed", cause);
+                throw new SafeRuntimeException(LOAD_FAILED, cause);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new SafeRuntimeException("Cache load interrupted", e);
+        }
+    }
+
+    // Every caller waiting on a failed load rethrows the same exception, so only the first caller adds its stack trace.
+    // A stack trace from each caller would grow the exception, and every log of it, with the number of waiting callers.
+    private static void addCallerStackTrace(Throwable throwable) {
+        synchronized (throwable) {
+            for (Throwable suppressed : throwable.getSuppressed()) {
+                if (suppressed instanceof SafeRuntimeException safeRuntimeException
+                        && safeRuntimeException.getLogMessage().equals(LOAD_FAILED)) {
+                    return;
+                }
+            }
+            throwable.addSuppressed(new SafeRuntimeException(LOAD_FAILED));
         }
     }
 
