@@ -55,4 +55,13 @@ public interface SyncLoadingCache<K, V extends @Nullable Object> extends SyncCac
      *         unestablished
      */
     V get(K key);
+
+    /*
+     * This interface intentionally does not support refresh() because it is does not provide the desired
+     * linearizability properties. The cache cannot lock entries being refreshed (because that would prevent concurrent
+     * readers) and thus must perform the refresh out-of-band. This can lead to surprising behavior where a refresh does
+     * not replace an entry whose load was in-flight when the refresh was requested.
+     *
+     * See https://github.com/ben-manes/caffeine/issues/1739#issuecomment-2200862708.
+     */
 }
