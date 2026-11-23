@@ -28,15 +28,15 @@ com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava (1 c
 
 com.google.j2objc:j2objc-annotations:3.1 (1 constraints: b809f1a0)
 
-com.palantir.safe-logging:logger:3.21.0 (4 constraints: 713cf80b)
+com.palantir.safe-logging:logger:3.22.0 (4 constraints: 713cf80b)
 
-com.palantir.safe-logging:logger-slf4j:3.21.0 (1 constraints: 310e8e50)
+com.palantir.safe-logging:logger-slf4j:3.22.0 (1 constraints: 320e9150)
 
-com.palantir.safe-logging:logger-spi:3.21.0 (2 constraints: 711e42b0)
+com.palantir.safe-logging:logger-spi:3.22.0 (2 constraints: 731e78b0)
 
-com.palantir.safe-logging:preconditions:3.21.0 (7 constraints: c166f1cc)
+com.palantir.safe-logging:preconditions:3.22.0 (7 constraints: c366eace)
 
-com.palantir.safe-logging:safe-logging:3.21.0 (10 constraints: cb953fa9)
+com.palantir.safe-logging:safe-logging:3.22.0 (10 constraints: d0959caf)
 
 com.palantir.tracing:tracing:6.43.0 (1 constraints: 3f055c3b)
 
@@ -88,7 +88,7 @@ com.google.testing.compile:compile-testing:0.24.0 (1 constraints: 8c149e75)
 
 com.google.truth:truth:1.4.5 (2 constraints: 7c26696b)
 
-com.palantir.safe-logging:preconditions-assertj:3.21.0 (1 constraints: 38053c3b)
+com.palantir.safe-logging:preconditions-assertj:3.22.0 (1 constraints: 39053f3b)
 
 junit:junit:4.13.2 (3 constraints: 6d31ed4f)
 
