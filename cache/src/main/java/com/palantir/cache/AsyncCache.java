@@ -202,13 +202,25 @@ public interface AsyncCache<K, V extends @Nullable Object> {
      */
     void invalidateAll();
 
-    // This interface intentionally does not support asMap() because we do not want to support cache mutations outside
-    // of the methods explicitly provide as part of this interface. We cannot guarantee the map implementation returned
-    // by Caffeine has the desired behavior. For example, it is impractical to provide a sensible, performant
-    // implementation of methods like Map.compute() for an async cache with in-flight computations.
-    //
-    // It is reasonable for callers to want to obtain snapshots of cache entries, so we provide this method to allow
-    // callers to iterate over the realized cache entries. This method intentionally returns an Iterator to avoid
-    // providing Collection methods which may have surprising behavior.
+    /*
+     * This interface intentionally does not support asMap() because we do not want to support cache mutations outside
+     * of the methods explicitly provide as part of this interface. We cannot guarantee the map implementation returned
+     * by Caffeine has the desired behavior. For example, it is impractical to provide a sensible, performant
+     * implementation of methods like Map.compute() for an async cache with in-flight computations.
+     *
+     * It is reasonable for callers to want to obtain snapshots of cache entries, so we provide this method to allow
+     * callers to iterate over the realized cache entries. This method intentionally returns an Iterator to avoid
+     * providing Collection methods which may have surprising behavior.
+     */
+
+    /**
+     * Returns an unmodifiable thread-safe iterator of the entries stored in this cache.
+     * <p>
+     * This iterator is at least <i>weakly consistent</i>: it is safe for concurrent use, but if the cache is modified
+     * (including by eviction) after the iterator is created, it is undefined which of the changes (if any) will be
+     * reflected in that iterator.
+     *
+     * @return an unmodifiable thread-safe iterator of the entries stored in this cache
+     */
     Iterator<Entry<K, V>> entries();
 }
